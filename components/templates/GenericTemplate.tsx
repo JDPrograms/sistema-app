@@ -1,6 +1,6 @@
 import BookingSection from "@/components/booking/BookingSection";
 
-interface Service { id: string; name: string; description?: string; price?: number }
+interface Service { id: string; name: string; description?: string | null; price?: number | null }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string; logoUrl?: string;

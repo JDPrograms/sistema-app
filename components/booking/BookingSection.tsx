@@ -1,6 +1,6 @@
 import BookingForm from "./BookingForm";
 
-interface Service { id: string; name: string; price?: number; duration?: number }
+interface Service { id: string; name: string; price?: number | null; duration?: number | null }
 
 interface Props {
   slug: string;
