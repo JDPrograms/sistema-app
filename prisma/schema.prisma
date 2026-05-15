@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model SuperAdmin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiProvider {
+  id        String   @id @default(cuid())
+  name      String   @unique // "gemini" | "groq"
+  label     String
+  apiKey    String   @default("")
+  isActive  Boolean  @default(false)
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiAgent {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  systemPrompt      String
+  preferredProvider String?  // "gemini" | "groq" | null (auto)
+  agentType         String   @default("general") // "admin" | "public" | "general"
+  isActive          Boolean  @default(true)
+  isGlobal          Boolean  @default(false)
+  siteId            String?
+  site              Site?    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Site {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  template       String
+  isActive       Boolean  @default(true)
+  hasAdminPanel  Boolean  @default(true)
+  modules        String   @default("{\"appointments\":true,\"content\":true,\"ads\":true,\"users\":true,\"customize\":true,\"ai\":true}")
+  primaryColor   String   @default("#3b82f6")
+  secondaryColor String   @default("#1e40af")
+  logoUrl        String?
+  description    String?
+  phone          String?
+  address        String?
+  email          String?
+  chatAgentId    String?
+  adminAgentId   String?
+  planType       String   @default("unlimited") // "unlimited" | "timed"
+  expiresAt      DateTime?
+  expiryReason   String?
+  whatsapp       String?
+  mapUrl         String?
+  socialLinks    String   @default("{}")
+  businessHours  String   @default("[]")
+  seoTitle       String?
+  seoDescription String?
+  pageBlocks     String   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  admins       SiteAdmin[]
+  users        SiteUser[]
+  pages        SitePage[]
+  services     SiteService[]
+  products     SiteProduct[]
+  ads          SiteAd[]
+  appointments SiteAppointment[]
+  staff        SiteStaff[]
+  aiAgents     AiAgent[]
+}
+
+model SiteAdmin {
+  id        String   @id @default(cuid())
+  email     String
+  password  String
+  name      String
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, siteId])
+}
+
+model SiteUser {
+  id        String   @id @default(cuid())
+  email     String
+  password  String
+  name      String
+  phone     String?
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, siteId])
+}
+
+model SitePage {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title     String
+  slug      String
+  content   String   @default("")
+  isHome    Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([siteId, slug])
+}
+
+model SiteService {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Float?
+  duration    Int?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteProduct {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Float?
+  stock       Int?
+  imageUrl    String?
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteStaff {
+  id           String            @id @default(cuid())
+  siteId       String
+  site         Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name         String
+  email        String?
+  phone        String?
+  specialty    String?
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  appointments SiteAppointment[]
+}
+
+model SiteAppointment {
+  id          String     @id @default(cuid())
+  siteId      String
+  site        Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  clientName  String
+  clientEmail String
+  clientPhone String?
+  serviceId   String?
+  serviceName String?
+  staffId     String?
+  staffName   String?
+  staff       SiteStaff? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  date        String
+  time        String
+  notes       String?
+  status      String     @default("pending")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model SiteAd {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  imageUrl    String?
+  linkUrl     String?
+  buttonText  String?
+  type        String   @default("banner")
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
