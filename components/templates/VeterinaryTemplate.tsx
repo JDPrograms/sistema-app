@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,18 +11,19 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
-export default function VeterinaryTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function VeterinaryTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#0d9488";
   const secondary = site.secondaryColor || "#f0fdfa";
   const activeStaff = site.staff.filter((s) => s.isActive);
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans bg-white">
+    <div className="min-h-screen font-sans bg-white flex flex-col">
 
       {/* Header */}
-      <header className="bg-white border-b border-teal-100 sticky top-0 z-40 shadow-sm">
+      <header className="bg-white border-b border-teal-100 sticky top-0 z-40 shadow-sm" style={getSecStyle(layout, "header", 0)}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -48,7 +50,7 @@ export default function VeterinaryTemplate({ site, appointmentsEnabled = true, c
       </header>
 
       {/* Hero */}
-      <section style={{ background: `linear-gradient(135deg, ${primary} 0%, #0f766e 60%, #115e59 100%)` }} className="text-white py-24">
+      <section style={{ background: `linear-gradient(135deg, ${primary} 0%, #0f766e 60%, #115e59 100%)`, ...getSecStyle(layout, "hero", 1) }} className="text-white py-24">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1 text-center md:text-left">
             <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5 text-sm font-medium mb-5">
@@ -80,7 +82,7 @@ export default function VeterinaryTemplate({ site, appointmentsEnabled = true, c
       </section>
 
       {/* Services */}
-      <section id="servicios" className="py-16 bg-white">
+      <section id="servicios" className="py-16 bg-white" style={getSecStyle(layout, "services", 2)}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <span className="inline-block px-4 py-1 rounded-full text-sm font-semibold mb-3" style={{ backgroundColor: `${primary}15`, color: primary }}>
@@ -125,7 +127,7 @@ export default function VeterinaryTemplate({ site, appointmentsEnabled = true, c
       </section>
 
       {/* Staff */}
-      <section id="equipo" style={{ backgroundColor: `${primary}08` }} className="py-16">
+      <section id="equipo" style={{ backgroundColor: `${primary}08`, ...getSecStyle(layout, "staff", 3) }} className="py-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <span className="inline-block px-4 py-1 rounded-full text-sm font-semibold mb-3" style={{ backgroundColor: `${primary}15`, color: primary }}>
@@ -158,24 +160,26 @@ export default function VeterinaryTemplate({ site, appointmentsEnabled = true, c
       </section>
 
       {/* Booking */}
-      {appointmentsEnabled && (
-        <div id="citas">
-          <div className="text-center pt-12 pb-2">
-            <h2 className="text-3xl font-bold text-gray-900">Pedir Turno</h2>
-            <p className="text-gray-500 mt-2">Reserva una cita para tu mascota en minutos</p>
-          </div>
-          <BookingSection
-            slug={site.slug}
-            siteName={site.name}
-            primaryColor={primary}
-            secondaryColor={secondary}
-            services={site.services}
-          />
-        </div>
-      )}
+      <div id="citas" style={getSecStyle(layout, "booking", 4)}>
+        {appointmentsEnabled && (
+          <>
+            <div className="text-center pt-12 pb-2">
+              <h2 className="text-3xl font-bold text-gray-900">Pedir Turno</h2>
+              <p className="text-gray-500 mt-2">Reserva una cita para tu mascota en minutos</p>
+            </div>
+            <BookingSection
+              slug={site.slug}
+              siteName={site.name}
+              primaryColor={primary}
+              secondaryColor={secondary}
+              services={site.services}
+            />
+          </>
+        )}
+      </div>
 
       {/* Contact */}
-      <section id="contacto" style={{ backgroundColor: `${primary}10` }} className="py-16">
+      <section id="contacto" style={{ backgroundColor: `${primary}10`, ...getSecStyle(layout, "contact", 5) }} className="py-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900">Contacto</h2>
@@ -215,9 +219,9 @@ export default function VeterinaryTemplate({ site, appointmentsEnabled = true, c
         </div>
       </section>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 6)}>{children}</div>
       {/* Footer */}
-      <footer style={{ backgroundColor: primary }} className="text-white py-8 text-center">
+      <footer style={{ backgroundColor: primary, ...getSecStyle(layout, "footer", 7) }} className="text-white py-8 text-center">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="text-xl">🐾</span>

@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,7 +11,7 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
 const WHY_CHOOSE = [
   { icon: "🏆", title: "Experiencia comprobada", desc: "Mas de una decada resolviendo casos complejos con resultados exitosos." },
@@ -18,15 +19,16 @@ const WHY_CHOOSE = [
   { icon: "✅", title: "Resultados efectivos", desc: "Estrategias legales solidas orientadas a proteger tus intereses." },
 ];
 
-export default function LawyerTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function LawyerTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#1e293b";
   const secondary = site.secondaryColor || "#d4a017";
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans" style={{ backgroundColor: "#f8fafc" }}>
+    <div className="min-h-screen font-sans flex flex-col" style={{ backgroundColor: "#f8fafc" }}>
 
       {/* Header */}
-      <header style={{ backgroundColor: primary }} className="text-white sticky top-0 z-40 shadow-md">
+      <header style={{ backgroundColor: primary, ...getSecStyle(layout, "header", 0) }} className="text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {site.logoUrl ? (
@@ -57,7 +59,7 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
       </header>
 
       {/* Hero */}
-      <section style={{ background: `linear-gradient(160deg, ${primary} 0%, #0f172a 100%)` }} className="text-white py-28 relative overflow-hidden">
+      <section style={{ background: `linear-gradient(160deg, ${primary} 0%, #0f172a 100%)`, ...getSecStyle(layout, "hero", 1) }} className="text-white py-28 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none select-none flex items-center justify-end pr-16">
           <span className="text-[20rem] leading-none">⚖️</span>
         </div>
@@ -86,7 +88,7 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* Areas de Practica / Services */}
-      <section id="areas" className="py-20">
+      <section id="areas" className="py-20" style={getSecStyle(layout, "areas", 2)}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <span className="inline-block px-4 py-1 rounded text-sm font-semibold mb-3" style={{ backgroundColor: `${secondary}18`, color: secondary }}>
@@ -121,7 +123,7 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* Team */}
-      <section id="equipo" style={{ backgroundColor: primary }} className="py-20 text-white">
+      <section id="equipo" style={{ backgroundColor: primary, ...getSecStyle(layout, "team", 3) }} className="py-20 text-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <span className="inline-block px-4 py-1 rounded text-sm font-semibold mb-3" style={{ backgroundColor: `${secondary}25`, color: secondary }}>
@@ -154,7 +156,7 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* Why Choose Us */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white" style={getSecStyle(layout, "office", 4)}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900">Por que elegirnos</h2>
@@ -173,24 +175,26 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* Booking */}
-      {appointmentsEnabled && (
-        <div id="citas" style={{ backgroundColor: "#f1f5f9" }}>
-          <div className="text-center pt-12 pb-2">
-            <h2 className="text-3xl font-bold text-gray-900">Consulta gratuita</h2>
-            <p className="text-gray-500 mt-2">Agenda tu primera consulta sin costo</p>
-          </div>
-          <BookingSection
-            slug={site.slug}
-            siteName={site.name}
-            primaryColor={primary}
-            secondaryColor={secondary}
-            services={site.services}
-          />
-        </div>
-      )}
+      <div id="citas" style={{ backgroundColor: "#f1f5f9", ...getSecStyle(layout, "booking", 5) }}>
+        {appointmentsEnabled && (
+          <>
+            <div className="text-center pt-12 pb-2">
+              <h2 className="text-3xl font-bold text-gray-900">Consulta gratuita</h2>
+              <p className="text-gray-500 mt-2">Agenda tu primera consulta sin costo</p>
+            </div>
+            <BookingSection
+              slug={site.slug}
+              siteName={site.name}
+              primaryColor={primary}
+              secondaryColor={secondary}
+              services={site.services}
+            />
+          </>
+        )}
+      </div>
 
       {/* Contact */}
-      <section id="contacto" style={{ backgroundColor: primary }} className="py-16 text-white">
+      <section id="contacto" style={{ backgroundColor: primary, ...getSecStyle(layout, "contact", 6) }} className="py-16 text-white">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-10">Contacto</h2>
           <div className="flex flex-col md:flex-row gap-5 justify-center flex-wrap">
@@ -227,9 +231,9 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
         </div>
       </section>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 7)}>{children}</div>
       {/* Footer */}
-      <footer className="py-8 text-center text-sm" style={{ backgroundColor: "#0f172a", color: "rgba(255,255,255,0.5)" }}>
+      <footer className="py-8 text-center text-sm" style={{ backgroundColor: "#0f172a", color: "rgba(255,255,255,0.5)", ...getSecStyle(layout, "footer", 8) }}>
         <div className="max-w-6xl mx-auto px-6">
           <p className="font-semibold text-white mb-1">{site.name}</p>
           <p>&copy; {new Date().getFullYear()} {site.name}. Todos los derechos reservados.</p>

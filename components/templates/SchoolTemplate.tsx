@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,7 +11,7 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
 const BENEFITS = [
   {
@@ -30,16 +31,17 @@ const BENEFITS = [
   },
 ];
 
-export default function SchoolTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function SchoolTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#4f46e5";
   const secondary = site.secondaryColor || "#818cf8";
   const activeStaff = site.staff.filter((s) => s.isActive);
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans bg-white text-gray-900">
+    <div className="min-h-screen font-sans bg-white text-gray-900 flex flex-col">
 
       {/* HEADER */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm" style={getSecStyle(layout, "header", 0)}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -68,7 +70,7 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
       {/* HERO */}
       <section
         className="py-24 relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, ${primary}08 0%, white 40%, ${secondary}12 100%)` }}
+        style={{ background: `linear-gradient(135deg, ${primary}08 0%, white 40%, ${secondary}12 100%)`, ...getSecStyle(layout, "hero", 1) }}
       >
         {/* Decorative blobs */}
         <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full opacity-10" style={{ backgroundColor: primary }} />
@@ -119,7 +121,7 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* NUESTROS CURSOS */}
-      <section id="cursos" className="py-20 bg-gray-50">
+      <section id="cursos" className="py-20 bg-gray-50" style={getSecStyle(layout, "courses", 2)}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Nuestros Cursos</h2>
@@ -173,6 +175,7 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* INSTRUCTORES */}
+      <div style={getSecStyle(layout, "instructors", 3)}>
       {activeStaff.length > 0 && (
         <section id="instructores" className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-6">
@@ -200,9 +203,10 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
           </div>
         </section>
       )}
+      </div>
 
       {/* POR QUE ELEGIRNOS */}
-      <section className="py-20" style={{ background: `linear-gradient(135deg, ${primary}08, ${secondary}10)` }}>
+      <section className="py-20" style={{ background: `linear-gradient(135deg, ${primary}08, ${secondary}10)`, ...getSecStyle(layout, "benefits", 4) }}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Por que elegirnos</h2>
@@ -227,8 +231,8 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* BOOKING */}
-      {appointmentsEnabled && (
-        <div id="inscribirse">
+      <div id="inscribirse" style={getSecStyle(layout, "booking", 5)}>
+        {appointmentsEnabled && (
           <BookingSection
             slug={site.slug}
             siteName={site.name}
@@ -236,11 +240,11 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
             secondaryColor={secondary}
             services={site.services}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* CONTACTO */}
-      <section id="contacto" className="py-16 bg-gray-50">
+      <section id="contacto" className="py-16 bg-gray-50" style={getSecStyle(layout, "contact", 6)}>
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-2xl font-extrabold text-center text-gray-900 mb-10">Contacto</h2>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
@@ -272,9 +276,9 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
         </div>
       </section>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 7)}>{children}</div>
       {/* FOOTER */}
-      <footer className="py-8 text-center text-white" style={{ backgroundColor: primary }}>
+      <footer className="py-8 text-center text-white" style={{ backgroundColor: primary, ...getSecStyle(layout, "footer", 8) }}>
         <p className="font-bold text-lg mb-1">{site.name}</p>
         <p className="text-sm opacity-70">&copy; {new Date().getFullYear()} Todos los derechos reservados.</p>
       </footer>

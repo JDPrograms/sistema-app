@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,7 +11,7 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
 const WHY_US = [
   { icon: "🏅", title: "Trayectoria reconocida", desc: "Anos de experiencia posicionandonos como referentes en el mercado inmobiliario local." },
@@ -18,15 +19,16 @@ const WHY_US = [
   { icon: "🔒", title: "Operaciones seguras", desc: "Respaldamos todas las transacciones con documentacion legal y gestion profesional." },
 ];
 
-export default function RealEstateTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function RealEstateTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#2563eb";
   const secondary = site.secondaryColor || "#f59e0b";
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans bg-white">
+    <div className="min-h-screen font-sans bg-white flex flex-col">
 
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm" style={getSecStyle(layout, "header", 0)}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -57,7 +59,7 @@ export default function RealEstateTemplate({ site, appointmentsEnabled = true, c
       </header>
 
       {/* Hero */}
-      <section style={{ background: `linear-gradient(135deg, ${primary} 0%, #1d4ed8 50%, #1e3a8a 100%)` }} className="text-white py-28 relative overflow-hidden">
+      <section style={{ background: `linear-gradient(135deg, ${primary} 0%, #1d4ed8 50%, #1e3a8a 100%)`, ...getSecStyle(layout, "hero", 1) }} className="text-white py-28 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none select-none flex items-center justify-end pr-12">
           <span className="text-[18rem] leading-none">🏘️</span>
         </div>
@@ -90,7 +92,7 @@ export default function RealEstateTemplate({ site, appointmentsEnabled = true, c
       </section>
 
       {/* Properties / Products */}
-      <section id="propiedades" className="py-20 bg-gray-50">
+      <section id="propiedades" className="py-20 bg-gray-50" style={getSecStyle(layout, "properties", 2)}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <span className="inline-block px-4 py-1 rounded-full text-sm font-semibold mb-3" style={{ backgroundColor: `${primary}12`, color: primary }}>
@@ -147,7 +149,7 @@ export default function RealEstateTemplate({ site, appointmentsEnabled = true, c
       </section>
 
       {/* Advisors / Staff */}
-      <section id="asesores" className="py-20 bg-white">
+      <section id="asesores" className="py-20 bg-white" style={getSecStyle(layout, "advisors", 3)}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <span className="inline-block px-4 py-1 rounded-full text-sm font-semibold mb-3" style={{ backgroundColor: `${primary}12`, color: primary }}>
@@ -180,7 +182,7 @@ export default function RealEstateTemplate({ site, appointmentsEnabled = true, c
       </section>
 
       {/* Why Us */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50" style={getSecStyle(layout, "services", 4)}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900">Por que trabajar con nosotros</h2>
@@ -199,24 +201,26 @@ export default function RealEstateTemplate({ site, appointmentsEnabled = true, c
       </section>
 
       {/* Booking */}
-      {appointmentsEnabled && (
-        <div id="citas" className="bg-white">
-          <div className="text-center pt-12 pb-2">
-            <h2 className="text-3xl font-bold text-gray-900">Agendar Visita</h2>
-            <p className="text-gray-500 mt-2">Coordinamos una visita a la propiedad de tu interes</p>
-          </div>
-          <BookingSection
-            slug={site.slug}
-            siteName={site.name}
-            primaryColor={primary}
-            secondaryColor={secondary}
-            services={site.services}
-          />
-        </div>
-      )}
+      <div id="citas" className="bg-white" style={getSecStyle(layout, "booking", 5)}>
+        {appointmentsEnabled && (
+          <>
+            <div className="text-center pt-12 pb-2">
+              <h2 className="text-3xl font-bold text-gray-900">Agendar Visita</h2>
+              <p className="text-gray-500 mt-2">Coordinamos una visita a la propiedad de tu interes</p>
+            </div>
+            <BookingSection
+              slug={site.slug}
+              siteName={site.name}
+              primaryColor={primary}
+              secondaryColor={secondary}
+              services={site.services}
+            />
+          </>
+        )}
+      </div>
 
       {/* Contact */}
-      <section id="contacto" style={{ backgroundColor: primary }} className="py-16 text-white">
+      <section id="contacto" style={{ backgroundColor: primary, ...getSecStyle(layout, "contact", 6) }} className="py-16 text-white">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-10">Contacto</h2>
           <div className="flex flex-col md:flex-row gap-5 justify-center flex-wrap">
@@ -253,9 +257,9 @@ export default function RealEstateTemplate({ site, appointmentsEnabled = true, c
         </div>
       </section>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 7)}>{children}</div>
       {/* Footer */}
-      <footer className="py-8 bg-gray-900 text-center">
+      <footer className="py-8 bg-gray-900 text-center" style={getSecStyle(layout, "footer", 8)}>
         <div className="max-w-7xl mx-auto px-6">
           <p className="font-bold text-white mb-1">{site.name}</p>
           <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} {site.name}. Todos los derechos reservados.</p>

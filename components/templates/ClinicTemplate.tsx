@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,18 +11,19 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
-export default function ClinicTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function ClinicTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#1d4ed8";
   const secondary = site.secondaryColor || "#0ea5e9";
   const activeStaff = site.staff.filter((s) => s.isActive);
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans bg-[#eff6ff] text-gray-900">
+    <div className="min-h-screen font-sans bg-[#eff6ff] text-gray-900 flex flex-col">
 
       {/* HEADER */}
-      <header className="bg-white sticky top-0 z-50 shadow-sm" style={{ borderBottom: `3px solid ${primary}` }}>
+      <header className="bg-white sticky top-0 z-50 shadow-sm" style={{ borderBottom: `3px solid ${primary}`, ...getSecStyle(layout, "header", 0) }}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -47,7 +49,7 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
       {/* HERO */}
       <section
         className="py-24"
-        style={{ background: `linear-gradient(135deg, #dbeafe 0%, #eff6ff 60%, #e0f2fe 100%)` }}
+        style={{ background: `linear-gradient(135deg, #dbeafe 0%, #eff6ff 60%, #e0f2fe 100%)`, ...getSecStyle(layout, "hero", 1) }}
       >
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1">
@@ -92,7 +94,7 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* ESPECIALIDADES */}
-      <section id="especialidades" className="py-20">
+      <section id="especialidades" className="py-20" style={getSecStyle(layout, "specialties", 2)}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Nuestras Especialidades</h2>
@@ -134,6 +136,7 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* EQUIPO MEDICO */}
+      <div style={getSecStyle(layout, "team", 3)}>
       {activeStaff.length > 0 && (
         <section id="equipo" className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-6">
@@ -160,9 +163,10 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
           </div>
         </section>
       )}
+      </div>
 
       {/* INFORMACION DEL CONSULTORIO */}
-      <section className="py-16 bg-[#eff6ff]">
+      <section className="py-16 bg-[#eff6ff]" style={getSecStyle(layout, "office", 4)}>
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-2xl font-extrabold text-gray-900 text-center mb-10">Informacion del Consultorio</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -204,8 +208,8 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
       </section>
 
       {/* BOOKING */}
-      {appointmentsEnabled && (
-        <div id="citas">
+      <div id="citas" style={getSecStyle(layout, "booking", 5)}>
+        {appointmentsEnabled && (
           <BookingSection
             slug={site.slug}
             siteName={site.name}
@@ -213,12 +217,12 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
             secondaryColor={secondary}
             services={site.services}
           />
-        </div>
-      )}
+        )}
+      </div>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 6)}>{children}</div>
       {/* FOOTER */}
-      <footer className="py-8 text-center text-white" style={{ backgroundColor: primary }}>
+      <footer className="py-8 text-center text-white" style={{ backgroundColor: primary, ...getSecStyle(layout, "footer", 7) }}>
         <p className="font-semibold text-lg mb-1">{site.name}</p>
         <p className="text-sm opacity-70">&copy; {new Date().getFullYear()} Todos los derechos reservados.</p>
       </footer>

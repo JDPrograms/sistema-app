@@ -104,7 +104,7 @@ export default function AppointmentsPage() {
   const activeStaff = staffList.filter((s) => s.isActive);
 
   return (
-    <div className="p-8 h-full flex flex-col">
+    <div className="p-4 sm:p-8 h-full flex flex-col">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Citas</h1>
         <p className="text-gray-500 mt-1">Gestiona todas las reservas de tu sitio</p>

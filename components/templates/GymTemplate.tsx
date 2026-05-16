@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,18 +11,19 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
-export default function GymTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function GymTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#ef4444";
   const secondary = site.secondaryColor || "#f97316";
   const activeStaff = site.staff.filter((s) => s.isActive);
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans bg-[#111] text-white">
+    <div className="min-h-screen font-sans bg-[#111] text-white flex flex-col">
 
       {/* HEADER */}
-      <header className="bg-[#0a0a0a] border-b border-white/10 sticky top-0 z-50">
+      <header className="bg-[#0a0a0a] border-b border-white/10 sticky top-0 z-50" style={getSecStyle(layout, "header", 0)}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -44,7 +46,7 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
       {/* HERO */}
       <section
         className="relative py-28 flex items-center justify-center overflow-hidden"
-        style={{ background: `linear-gradient(135deg, #111 0%, #1a1a1a 50%, ${primary}22 100%)` }}
+        style={{ background: `linear-gradient(135deg, #111 0%, #1a1a1a 50%, ${primary}22 100%)`, ...getSecStyle(layout, "hero", 1) }}
       >
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "20px 20px" }} />
         <div className="relative max-w-4xl mx-auto px-6 text-center">
@@ -78,7 +80,7 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
       </section>
 
       {/* NUESTRAS CLASES */}
-      <section id="clases" className="py-20 max-w-6xl mx-auto px-6">
+      <section id="clases" className="py-20 max-w-6xl mx-auto px-6" style={getSecStyle(layout, "classes", 2)}>
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-black uppercase" style={{ color: primary }}>Nuestras Clases</h2>
           <p className="text-gray-500 mt-2">Programas diseñados para todos los niveles</p>
@@ -118,6 +120,7 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
       </section>
 
       {/* ENTRENADORES */}
+      <div style={getSecStyle(layout, "trainers", 3)}>
       {activeStaff.length > 0 && (
         <section id="entrenadores" className="py-20 bg-[#0d0d0d]">
           <div className="max-w-6xl mx-auto px-6">
@@ -146,22 +149,25 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
           </div>
         </section>
       )}
+      </div>
 
       {/* BOOKING */}
-      {appointmentsEnabled && (
-        <div className="bg-[#111]">
-          <BookingSection
-            slug={site.slug}
-            siteName={site.name}
-            primaryColor={primary}
-            secondaryColor={secondary}
-            services={site.services}
-          />
-        </div>
-      )}
+      <div style={getSecStyle(layout, "booking", 4)}>
+        {appointmentsEnabled && (
+          <div className="bg-[#111]">
+            <BookingSection
+              slug={site.slug}
+              siteName={site.name}
+              primaryColor={primary}
+              secondaryColor={secondary}
+              services={site.services}
+            />
+          </div>
+        )}
+      </div>
 
       {/* CONTACTO */}
-      <section id="contacto" className="py-16 bg-[#0a0a0a]">
+      <section id="contacto" className="py-16 bg-[#0a0a0a]" style={getSecStyle(layout, "contact", 5)}>
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-2xl font-black uppercase text-center mb-10" style={{ color: primary }}>Contacto</h2>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
@@ -187,9 +193,9 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
         </div>
       </section>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 6)}>{children}</div>
       {/* FOOTER */}
-      <footer className="bg-black py-8 text-center border-t border-white/5">
+      <footer className="bg-black py-8 text-center border-t border-white/5" style={getSecStyle(layout, "footer", 7)}>
         <p className="text-sm text-gray-600">
           &copy; {new Date().getFullYear()} <span className="font-bold text-gray-400">{site.name}</span>. Todos los derechos reservados.
         </p>

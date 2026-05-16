@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,18 +11,19 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
-export default function HotelTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function HotelTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#1e293b";
   const secondary = site.secondaryColor || "#d4a574";
   const activeStaff = site.staff.filter((s) => s.isActive);
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans" style={{ backgroundColor: "#faf9f7" }}>
+    <div className="min-h-screen font-sans flex flex-col" style={{ backgroundColor: "#faf9f7" }}>
 
       {/* Header */}
-      <header style={{ backgroundColor: primary }} className="text-white sticky top-0 z-40 shadow-lg">
+      <header style={{ backgroundColor: primary, ...getSecStyle(layout, "header", 0) }} className="text-white sticky top-0 z-40 shadow-lg">
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {site.logoUrl ? (
@@ -50,7 +52,7 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
       </header>
 
       {/* Hero */}
-      <section className="relative text-white overflow-hidden" style={{ minHeight: "88vh" }}>
+      <section className="relative text-white overflow-hidden" style={{ minHeight: "88vh", ...getSecStyle(layout, "hero", 1) }}>
         <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${primary} 0%, #0f172a 40%, #1a1a2e 100%)` }} />
         <div className="absolute inset-0 opacity-10 pointer-events-none select-none">
           <div className="w-full h-full flex items-center justify-center text-[30rem] leading-none">🏨</div>
@@ -83,7 +85,7 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
       </section>
 
       {/* Rooms / Products */}
-      <section id="habitaciones" style={{ backgroundColor: "#faf9f7" }} className="py-20">
+      <section id="habitaciones" style={{ backgroundColor: "#faf9f7", ...getSecStyle(layout, "rooms", 2) }} className="py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <span className="inline-block px-4 py-1 text-sm font-semibold mb-3 rounded-full" style={{ backgroundColor: `${secondary}20`, color: "#92400e" }}>
@@ -140,7 +142,7 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
       </section>
 
       {/* Services & Amenities */}
-      <section id="servicios" style={{ backgroundColor: primary }} className="py-20 text-white">
+      <section id="servicios" style={{ backgroundColor: primary, ...getSecStyle(layout, "amenities", 3) }} className="py-20 text-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <span className="inline-block px-4 py-1 text-sm font-semibold mb-3 rounded-full" style={{ backgroundColor: `${secondary}20`, color: secondary }}>
@@ -173,6 +175,7 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
       </section>
 
       {/* Staff */}
+      <div style={getSecStyle(layout, "extra", 4)}>
       {activeStaff.length > 0 && (
         <section style={{ backgroundColor: "#faf9f7" }} className="py-20">
           <div className="max-w-7xl mx-auto px-6">
@@ -197,26 +200,29 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
           </div>
         </section>
       )}
+      </div>
 
       {/* Booking */}
-      {appointmentsEnabled && (
-        <div id="citas" className="bg-white">
-          <div className="text-center pt-12 pb-2">
-            <h2 className="text-3xl font-bold text-gray-900">Hacer Reserva</h2>
-            <p className="text-gray-500 mt-2">Reserva tu estadía de forma rapida y segura</p>
-          </div>
-          <BookingSection
-            slug={site.slug}
-            siteName={site.name}
-            primaryColor={primary}
-            secondaryColor={secondary}
-            services={site.services}
-          />
-        </div>
-      )}
+      <div id="citas" className="bg-white" style={getSecStyle(layout, "booking", 5)}>
+        {appointmentsEnabled && (
+          <>
+            <div className="text-center pt-12 pb-2">
+              <h2 className="text-3xl font-bold text-gray-900">Hacer Reserva</h2>
+              <p className="text-gray-500 mt-2">Reserva tu estadía de forma rapida y segura</p>
+            </div>
+            <BookingSection
+              slug={site.slug}
+              siteName={site.name}
+              primaryColor={primary}
+              secondaryColor={secondary}
+              services={site.services}
+            />
+          </>
+        )}
+      </div>
 
       {/* Contact */}
-      <section id="contacto" style={{ backgroundColor: "#faf9f7" }} className="py-20">
+      <section id="contacto" style={{ backgroundColor: "#faf9f7", ...getSecStyle(layout, "contact", 6) }} className="py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900">Contacto y Reservas</h2>
@@ -258,9 +264,9 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
         </div>
       </section>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 7)}>{children}</div>
       {/* Footer */}
-      <footer style={{ backgroundColor: "#0f172a" }} className="text-white py-10 text-center">
+      <footer style={{ backgroundColor: "#0f172a", ...getSecStyle(layout, "footer", 8) }} className="text-white py-10 text-center">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-center gap-3 mb-3">
             <span className="text-2xl">🏨</span>

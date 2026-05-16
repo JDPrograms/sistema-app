@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import ImageUpload from "@/components/ui/ImageUpload";
 
 // ---- Types ----
 type BlockType = "gallery" | "stats" | "testimonials" | "faq" | "cta" | "text";
+type BlockWidth = "full" | "1/2" | "1/3";
 
-interface PageBlock { id: string; type: BlockType; config: any; order: number; }
+interface PageBlock { id: string; type: BlockType; config: any; order: number; width?: BlockWidth; }
 
 const BLOCK_PALETTE: { type: BlockType; icon: string; label: string; description: string }[] = [
   { type: "gallery",       icon: "🖼️",  label: "Galeria de fotos",   description: "Muestra hasta 8 imagenes en grilla" },
@@ -32,7 +34,7 @@ function defaultConfig(type: BlockType): any {
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 // ---- Block config editors ----
-function GalleryEditor({ config, onChange }: { config: any; onChange: (c: any) => void }) {
+function GalleryEditor({ config, onChange, slug }: { config: any; onChange: (c: any) => void; slug?: string }) {
   const images: string[] = config.images || [];
   return (
     <div className="space-y-3">
@@ -40,15 +42,22 @@ function GalleryEditor({ config, onChange }: { config: any; onChange: (c: any) =
         <input className={inp} value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} />
       </Field>
       <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Imagenes (URLs)</label>
-        <div className="space-y-2">
+        <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Imagenes</label>
+        <div className="space-y-3">
           {images.map((url, i) => (
-            <div key={i} className="flex gap-2">
-              <input className={inp + " flex-1"} value={url} placeholder="https://..." onChange={(e) => {
-                const next = [...images]; next[i] = e.target.value; onChange({ ...config, images: next });
-              }} />
-              {url && <img src={url} alt="" className="w-10 h-10 rounded object-cover border flex-shrink-0" onError={(e) => (e.currentTarget.style.display = "none")} />}
-              <button type="button" className="text-red-400 hover:text-red-600 px-2" onClick={() => { const next = images.filter((_, j) => j !== i); onChange({ ...config, images: next }); }}>×</button>
+            <div key={i} className="flex gap-2 items-start">
+              <div className="flex-1">
+                <ImageUpload
+                  value={url}
+                  onChange={(next) => {
+                    const arr = [...images]; arr[i] = next; onChange({ ...config, images: arr });
+                  }}
+                  slug={slug}
+                  label=""
+                  previewHeight="h-12"
+                />
+              </div>
+              <button type="button" className="text-red-400 hover:text-red-600 px-1 mt-8 flex-shrink-0" onClick={() => { const next = images.filter((_, j) => j !== i); onChange({ ...config, images: next }); }}>×</button>
             </div>
           ))}
           {images.length < 8 && (
@@ -170,9 +179,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function BlockEditor({ block, onChange }: { block: PageBlock; onChange: (c: any) => void }) {
+function BlockEditor({ block, onChange, slug }: { block: PageBlock; onChange: (c: any) => void; slug?: string }) {
   switch (block.type) {
-    case "gallery":      return <GalleryEditor config={block.config} onChange={onChange} />;
+    case "gallery":      return <GalleryEditor config={block.config} onChange={onChange} slug={slug} />;
     case "stats":        return <StatsEditor config={block.config} onChange={onChange} />;
     case "testimonials": return <TestimonialsEditor config={block.config} onChange={onChange} />;
     case "faq":          return <FaqEditor config={block.config} onChange={onChange} />;
@@ -191,6 +200,10 @@ export default function BuilderPage() {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Drag-and-drop state
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragItem = useRef<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/site/${slug}/customize`).then(async (r) => {
@@ -232,6 +245,35 @@ export default function BuilderPage() {
     });
   }
 
+  function setBlockWidth(id: string, width: BlockWidth) {
+    setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, width } : b));
+  }
+
+  function handleDragStart(id: string) {
+    dragItem.current = id;
+  }
+
+  function handleDragEnter(id: string) {
+    if (dragItem.current !== id) setDragOverId(id);
+  }
+
+  function handleDragEnd() {
+    const from = dragItem.current;
+    const to = dragOverId;
+    dragItem.current = null;
+    setDragOverId(null);
+    if (!from || !to || from === to) return;
+    setBlocks((prev) => {
+      const sorted = [...prev].sort((a, b) => a.order - b.order);
+      const fromIdx = sorted.findIndex((b) => b.id === from);
+      const toIdx = sorted.findIndex((b) => b.id === to);
+      const reordered = [...sorted];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
+      return reordered.map((b, i) => ({ ...b, order: i }));
+    });
+  }
+
   async function handleSave() {
     setSaving(true);
     const ordered = [...blocks].sort((a, b) => a.order - b.order).map((b, i) => ({ ...b, order: i }));
@@ -253,9 +295,9 @@ export default function BuilderPage() {
   if (loading) return <div className="p-8 text-gray-400">Cargando constructor...</div>;
 
   return (
-    <div className="flex h-full min-h-screen">
+    <div className="flex flex-col lg:flex-row h-full min-h-screen">
       {/* ---- LEFT PANEL ---- */}
-      <div className="w-[420px] flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+      <div className="w-full lg:w-[420px] lg:flex-shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col overflow-hidden lg:max-h-screen lg:sticky lg:top-0">
         {/* Header */}
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <div>
@@ -298,28 +340,60 @@ export default function BuilderPage() {
           {sorted.map((block, idx) => {
             const meta = palette.find((p) => p.type === block.type)!;
             const isExpanded = expanded === block.id;
+            const isDragging = dragItem.current === block.id;
+            const isDragOver = dragOverId === block.id;
+            const w = block.width ?? "full";
             return (
-              <div key={block.id} className={`rounded-xl border transition-all ${isExpanded ? "border-blue-300 bg-blue-50/40 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"}`}>
+              <div
+                key={block.id}
+                draggable
+                onDragStart={() => handleDragStart(block.id)}
+                onDragEnter={() => handleDragEnter(block.id)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => e.preventDefault()}
+                className={`rounded-xl border transition-all select-none ${
+                  isDragOver ? "border-blue-400 bg-blue-50 shadow-md ring-1 ring-blue-300" :
+                  isExpanded ? "border-blue-300 bg-blue-50/40 shadow-sm" :
+                  "border-gray-200 bg-white hover:border-gray-300"
+                } ${isDragging ? "opacity-40" : ""}`}
+              >
                 {/* Block header */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-lg flex-shrink-0">{meta.icon}</span>
-                  <button className="flex-1 text-left" onClick={() => setExpanded(isExpanded ? null : block.id)}>
-                    <p className="text-sm font-semibold text-gray-900">{meta.label}</p>
+                <div className="flex items-center gap-1.5 px-2 py-2.5">
+                  {/* Drag handle */}
+                  <span className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 px-1 text-base leading-none" title="Arrastar para reordenar">⠿</span>
+                  <span className="text-base flex-shrink-0">{meta.icon}</span>
+                  <button className="flex-1 text-left min-w-0" onClick={() => setExpanded(isExpanded ? null : block.id)}>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{meta.label}</p>
                     {block.config.title && <p className="text-xs text-gray-400 truncate">{block.config.title}</p>}
                   </button>
+
+                  {/* Width control */}
+                  <div className="flex gap-0.5 flex-shrink-0 border border-gray-200 rounded-lg p-0.5" title="Ancho del bloque">
+                    {(["full", "1/2", "1/3"] as BlockWidth[]).map((bw) => (
+                      <button key={bw} onClick={() => setBlockWidth(block.id, bw)}
+                        title={bw === "full" ? "Ancho completo" : bw === "1/2" ? "Mitad" : "Un tercio"}
+                        className={`h-5 px-1.5 rounded text-xs font-mono transition-colors ${
+                          w === bw ? "bg-blue-600 text-white" : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                        }`}>
+                        {bw === "full" ? "1/1" : bw}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Order buttons */}
                   <div className="flex gap-0.5 flex-shrink-0">
                     <button onClick={() => moveBlock(block.id, -1)} disabled={idx === 0}
-                      className="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 transition-colors text-xs">↑</button>
+                      className="w-5 h-5 rounded flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 transition-colors text-xs">↑</button>
                     <button onClick={() => moveBlock(block.id, 1)} disabled={idx === sorted.length - 1}
-                      className="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 transition-colors text-xs">↓</button>
+                      className="w-5 h-5 rounded flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 transition-colors text-xs">↓</button>
                     <button onClick={() => removeBlock(block.id)}
-                      className="w-6 h-6 rounded flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors text-xs">×</button>
+                      className="w-5 h-5 rounded flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors text-xs">×</button>
                   </div>
                 </div>
                 {/* Block editor */}
                 {isExpanded && (
                   <div className="px-3 pb-4 pt-1 border-t border-blue-200/50">
-                    <BlockEditor block={block} onChange={(c) => updateConfig(block.id, c)} />
+                    <BlockEditor block={block} onChange={(c) => updateConfig(block.id, c)} slug={slug} />
                   </div>
                 )}
               </div>
@@ -340,7 +414,7 @@ export default function BuilderPage() {
       </div>
 
       {/* ---- RIGHT PANEL: PREVIEW ---- */}
-      <div className="flex-1 bg-gray-100 flex flex-col">
+      <div className="flex-1 bg-gray-100 flex flex-col min-h-[60vh] lg:min-h-screen">
         <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-red-400" />

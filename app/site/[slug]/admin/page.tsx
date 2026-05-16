@@ -128,7 +128,7 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
   ];
 
   return (
-    <div className="p-8 space-y-7">
+    <div className="p-4 sm:p-8 space-y-7">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

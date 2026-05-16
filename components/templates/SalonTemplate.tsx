@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null; imageUrl?: string | null; }
@@ -10,18 +11,19 @@ interface SiteData {
   logoUrl?: string | null;
   services: Service[]; products: Product[]; staff: Staff[];
 }
-interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; }
+interface TemplateProps { site: SiteData; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null; }
 
-export default function SalonTemplate({ site, appointmentsEnabled = true, children }: TemplateProps) {
+export default function SalonTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: TemplateProps) {
   const primary = site.primaryColor || "#ec4899";
   const secondary = site.secondaryColor || "#f9a8d4";
   const activeStaff = site.staff.filter((s) => s.isActive);
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans" style={{ backgroundColor: "#fdf2f8" }}>
+    <div className="min-h-screen font-sans flex flex-col" style={{ backgroundColor: "#fdf2f8" }}>
 
       {/* HEADER */}
-      <header className="bg-white shadow-sm border-b" style={{ borderColor: `${primary}30` }}>
+      <header className="bg-white shadow-sm border-b" style={{ borderColor: `${primary}30`, ...getSecStyle(layout, "header", 0) }}>
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {site.logoUrl ? (
@@ -47,7 +49,7 @@ export default function SalonTemplate({ site, appointmentsEnabled = true, childr
       {/* HERO */}
       <section
         className="py-28 text-center relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, #fce7f3 0%, #fdf2f8 50%, #fce7f3 100%)` }}
+        style={{ background: `linear-gradient(135deg, #fce7f3 0%, #fdf2f8 50%, #fce7f3 100%)`, ...getSecStyle(layout, "hero", 1) }}
       >
         {/* Decorative circles */}
         <div className="absolute top-8 left-8 w-32 h-32 rounded-full opacity-20" style={{ backgroundColor: secondary }} />
@@ -84,7 +86,7 @@ export default function SalonTemplate({ site, appointmentsEnabled = true, childr
       </section>
 
       {/* NUESTROS SERVICIOS */}
-      <section id="servicios" className="py-20 max-w-6xl mx-auto px-6">
+      <section id="servicios" className="py-20 max-w-6xl mx-auto px-6" style={getSecStyle(layout, "services", 2)}>
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold mb-2" style={{ color: "#2d1b2e" }}>Nuestros Servicios</h2>
           <p className="text-gray-500">Tratamientos exclusivos para tu belleza y bienestar</p>
@@ -134,6 +136,7 @@ export default function SalonTemplate({ site, appointmentsEnabled = true, childr
       </section>
 
       {/* EQUIPO */}
+      <div style={getSecStyle(layout, "team", 3)}>
       {activeStaff.length > 0 && (
         <section id="equipo" className="py-20" style={{ backgroundColor: "#fce7f3" }}>
           <div className="max-w-6xl mx-auto px-6">
@@ -165,20 +168,23 @@ export default function SalonTemplate({ site, appointmentsEnabled = true, childr
           </div>
         </section>
       )}
+      </div>
 
       {/* BOOKING */}
-      {appointmentsEnabled && (
-        <BookingSection
-          slug={site.slug}
-          siteName={site.name}
-          primaryColor={primary}
-          secondaryColor={secondary}
-          services={site.services}
-        />
-      )}
+      <div style={getSecStyle(layout, "booking", 4)}>
+        {appointmentsEnabled && (
+          <BookingSection
+            slug={site.slug}
+            siteName={site.name}
+            primaryColor={primary}
+            secondaryColor={secondary}
+            services={site.services}
+          />
+        )}
+      </div>
 
       {/* CONTACTO */}
-      <section id="contacto" className="py-20 bg-white">
+      <section id="contacto" className="py-20 bg-white" style={getSecStyle(layout, "contact", 5)}>
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-2" style={{ color: "#2d1b2e" }}>Visitanos</h2>
@@ -221,9 +227,9 @@ export default function SalonTemplate({ site, appointmentsEnabled = true, childr
         </div>
       </section>
 
-      {children}
+      <div style={getSecStyle(layout, "blocks", 6)}>{children}</div>
       {/* FOOTER */}
-      <footer className="py-8 text-center border-t" style={{ borderColor: `${primary}20`, backgroundColor: "#fdf2f8" }}>
+      <footer className="py-8 text-center border-t" style={{ borderColor: `${primary}20`, backgroundColor: "#fdf2f8", ...getSecStyle(layout, "footer", 7) }}>
         <p className="font-semibold mb-1" style={{ color: primary }}>{site.name}</p>
         <p className="text-sm text-gray-400">&copy; {new Date().getFullYear()} Todos los derechos reservados.</p>
       </footer>

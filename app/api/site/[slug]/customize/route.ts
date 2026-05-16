@@ -11,11 +11,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
   const { slug } = await params;
   const site = await prisma.site.findUnique({ where: { slug } });
   if (!site) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-  // Raw SQL fallback for pageBlocks
-  const rawBlocks = await prisma.$queryRaw<{ pageBlocks: string | null }[]>`
-    SELECT "pageBlocks" FROM "Site" WHERE slug = ${slug}
+  // Raw SQL fallback for pageBlocks and layoutConfig
+  const rawExtra = await prisma.$queryRaw<{ pageBlocks: string | null; layoutConfig: string | null }[]>`
+    SELECT "pageBlocks", "layoutConfig" FROM "Site" WHERE slug = ${slug}
   `;
-  (site as any).pageBlocks = rawBlocks[0]?.pageBlocks ?? "[]";
+  (site as any).pageBlocks = rawExtra[0]?.pageBlocks ?? "[]";
+  (site as any).layoutConfig = rawExtra[0]?.layoutConfig ?? null;
   return NextResponse.json(site);
 }
 
@@ -47,9 +48,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
   if (body.businessHours !== undefined) data.businessHours = typeof body.businessHours === "string" ? body.businessHours : JSON.stringify(body.businessHours ?? []);
   if (body.seoTitle !== undefined) data.seoTitle = body.seoTitle ?? null;
   if (body.seoDescription !== undefined) data.seoDescription = body.seoDescription ?? null;
-  // Extract pageBlocks to handle separately via raw SQL (avoids Prisma binary schema mismatch)
+  // Extract pageBlocks and layoutConfig to handle via raw SQL (avoids Prisma binary schema mismatch)
   const pageBlocksValue = body.pageBlocks !== undefined
     ? (typeof body.pageBlocks === "string" ? body.pageBlocks : JSON.stringify(body.pageBlocks ?? []))
+    : undefined;
+  const layoutConfigValue = body.layoutConfig !== undefined
+    ? (typeof body.layoutConfig === "string" ? body.layoutConfig : JSON.stringify(body.layoutConfig ?? null))
     : undefined;
 
   let site: any;
@@ -62,7 +66,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
 
   if (pageBlocksValue !== undefined) {
     await prisma.$executeRaw`UPDATE "Site" SET "pageBlocks" = ${pageBlocksValue} WHERE slug = ${slug}`;
-    site.pageBlocks = pageBlocksValue;
+    (site as any).pageBlocks = pageBlocksValue;
+  }
+
+  if (layoutConfigValue !== undefined) {
+    await prisma.$executeRaw`UPDATE "Site" SET "layoutConfig" = ${layoutConfigValue} WHERE slug = ${slug}`;
+    (site as any).layoutConfig = layoutConfigValue;
   }
 
   return NextResponse.json(site);

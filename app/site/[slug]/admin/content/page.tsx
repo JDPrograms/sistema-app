@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import ImageUpload from "@/components/ui/ImageUpload";
 
 interface ServiceItem {
   id: string; name: string; description?: string; price?: number;
@@ -154,8 +155,8 @@ export default function ContentPage() {
   const items = (tab === "services" ? services : products) as (ServiceItem | ProductItem)[];
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Contenido del sitio</h1>
           <p className="text-gray-500 mt-1">Gestiona servicios y productos</p>
@@ -183,9 +184,9 @@ export default function ContentPage() {
             Nuevo {tab === "services" ? "servicio" : "producto"}
           </h2>
           {tab === "services" ? (
-            <ServiceFields form={serviceForm} setForm={setServiceForm} />
+            <ServiceFields form={serviceForm} setForm={setServiceForm} slug={slug} />
           ) : (
-            <ProductFields form={productForm} setForm={setProductForm} />
+            <ProductFields form={productForm} setForm={setProductForm} slug={slug} />
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-3">
@@ -218,9 +219,9 @@ export default function ContentPage() {
                   <div className="space-y-4">
                     <p className="text-sm font-semibold text-gray-700">Editando: {item.name}</p>
                     {tab === "services" ? (
-                      <ServiceFields form={editServiceForm} setForm={setEditServiceForm} />
+                      <ServiceFields form={editServiceForm} setForm={setEditServiceForm} slug={slug} />
                     ) : (
-                      <ProductFields form={editProductForm} setForm={setEditProductForm} />
+                      <ProductFields form={editProductForm} setForm={setEditProductForm} slug={slug} />
                     )}
                     <div className="flex gap-2">
                       <button type="button" onClick={() => handleSaveEdit(item.id)}
@@ -271,7 +272,7 @@ export default function ContentPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
                       <button onClick={() => startEdit(item)}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 transition-colors">
                         Editar
@@ -300,18 +301,19 @@ export default function ContentPage() {
   );
 }
 
-function ServiceFields({ form, setForm }: {
+function ServiceFields({ form, setForm, slug }: {
   form: typeof emptyServiceForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyServiceForm>>;
+  slug?: string;
 }) {
   const inp = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="col-span-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="sm:col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
         <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required className={inp} />
       </div>
-      <div className="col-span-2">
+      <div className="sm:col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">Descripcion</label>
         <input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className={inp} />
       </div>
@@ -325,31 +327,31 @@ function ServiceFields({ form, setForm }: {
         <input type="number" value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))}
           min="0" className={inp} placeholder="30" />
       </div>
-      <div className="col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen</label>
-        <input value={form.imageUrl} onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
-          className={inp} placeholder="https://ejemplo.com/imagen.jpg" />
-        {form.imageUrl && (
-          <img src={form.imageUrl} alt="preview" className="mt-2 h-20 rounded-lg object-cover border border-gray-200"
-            onError={(e) => (e.currentTarget.style.display = "none")} />
-        )}
+      <div className="sm:col-span-2">
+        <ImageUpload
+          label="Imagen del servicio"
+          value={form.imageUrl}
+          onChange={(url) => setForm((p) => ({ ...p, imageUrl: url }))}
+          slug={slug}
+        />
       </div>
     </div>
   );
 }
 
-function ProductFields({ form, setForm }: {
+function ProductFields({ form, setForm, slug }: {
   form: typeof emptyProductForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyProductForm>>;
+  slug?: string;
 }) {
   const inp = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="col-span-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="sm:col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
         <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required className={inp} />
       </div>
-      <div className="col-span-2">
+      <div className="sm:col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">Descripcion</label>
         <input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className={inp} />
       </div>
@@ -363,19 +365,18 @@ function ProductFields({ form, setForm }: {
         <input type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))}
           min="0" className={inp} placeholder="0" />
       </div>
-      <div className="col-span-2">
+      <div className="sm:col-span-2">
         <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
         <input value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
           className={inp} placeholder="Ej: Herramientas, Bebidas, Cortes..." />
       </div>
-      <div className="col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen</label>
-        <input value={form.imageUrl} onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
-          className={inp} placeholder="https://ejemplo.com/producto.jpg" />
-        {form.imageUrl && (
-          <img src={form.imageUrl} alt="preview" className="mt-2 h-20 rounded-lg object-cover border border-gray-200"
-            onError={(e) => (e.currentTarget.style.display = "none")} />
-        )}
+      <div className="sm:col-span-2">
+        <ImageUpload
+          label="Imagen del producto"
+          value={form.imageUrl}
+          onChange={(url) => setForm((p) => ({ ...p, imageUrl: url }))}
+          slug={slug}
+        />
       </div>
     </div>
   );

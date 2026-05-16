@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null }
 interface Site {
@@ -7,12 +8,13 @@ interface Site {
   services: Service[];
 }
 
-export default function GenericTemplate({ site, appointmentsEnabled = true, children }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode }) {
+export default function GenericTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
   const primary = site.primaryColor || "#6366f1";
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans">
-      <header className="bg-white border-b border-gray-100 shadow-sm">
+    <div className="min-h-screen font-sans flex flex-col">
+      <header className="bg-white border-b border-gray-100 shadow-sm" style={getSecStyle(layout, "header", 0)}>
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -31,7 +33,7 @@ export default function GenericTemplate({ site, appointmentsEnabled = true, chil
         </div>
       </header>
 
-      <section className="py-24 text-center px-6" style={{ background: `linear-gradient(135deg, ${primary}10, ${primary}05)` }}>
+      <section className="py-24 text-center px-6" style={{ background: `linear-gradient(135deg, ${primary}10, ${primary}05)`, ...getSecStyle(layout, "hero", 1) }}>
         <div className="max-w-3xl mx-auto">
           <h1 className="text-5xl font-extrabold text-gray-900 mb-4">{site.name}</h1>
           <p className="text-xl text-gray-500">{site.description || "Bienvenido a nuestro sitio web."}</p>
@@ -56,6 +58,7 @@ export default function GenericTemplate({ site, appointmentsEnabled = true, chil
         </div>
       </section>
 
+      <div style={getSecStyle(layout, "services", 2)}>
       {site.services.length > 0 && (
         <section id="servicios" className="py-16 bg-white">
           <div className="max-w-5xl mx-auto px-6">
@@ -77,18 +80,21 @@ export default function GenericTemplate({ site, appointmentsEnabled = true, chil
           </div>
         </section>
       )}
+      </div>
 
-      {appointmentsEnabled && (
-        <BookingSection
-          slug={site.slug}
-          siteName={site.name}
-          primaryColor={primary}
-          secondaryColor={site.secondaryColor}
-          services={site.services}
-        />
-      )}
+      <div style={getSecStyle(layout, "booking", 3)}>
+        {appointmentsEnabled && (
+          <BookingSection
+            slug={site.slug}
+            siteName={site.name}
+            primaryColor={primary}
+            secondaryColor={site.secondaryColor}
+            services={site.services}
+          />
+        )}
+      </div>
 
-      <section id="contacto" className="py-16 bg-gray-50">
+      <section id="contacto" className="py-16 bg-gray-50" style={getSecStyle(layout, "contact", 4)}>
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold mb-8 text-gray-900">Contacto</h2>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
@@ -99,8 +105,8 @@ export default function GenericTemplate({ site, appointmentsEnabled = true, chil
         </div>
       </section>
 
-      {children}
-      <footer className="bg-gray-900 text-white py-8 text-center text-sm">
+      <div style={getSecStyle(layout, "blocks", 5)}>{children}</div>
+      <footer className="bg-gray-900 text-white py-8 text-center text-sm" style={getSecStyle(layout, "footer", 6)}>
         &copy; {new Date().getFullYear()} {site.name}
       </footer>
     </div>

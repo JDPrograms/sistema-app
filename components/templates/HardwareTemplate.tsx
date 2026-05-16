@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null }
 interface Site {
@@ -7,14 +8,14 @@ interface Site {
   products: Product[];
 }
 
-export default function HardwareTemplate({ site, appointmentsEnabled = true, children }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode }) {
+export default function HardwareTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
   const primary = site.primaryColor || "#ea580c";
-
   const categories = [...new Set(site.products.map((p) => p.category).filter(Boolean))] as string[];
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans">
-      <header style={{ backgroundColor: primary }} className="text-white">
+    <div className="min-h-screen font-sans flex flex-col">
+      <header style={{ backgroundColor: primary, ...getSecStyle(layout, "header", 0) }} className="text-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -36,14 +37,14 @@ export default function HardwareTemplate({ site, appointmentsEnabled = true, chi
         </div>
       </header>
 
-      <div style={{ backgroundColor: primary }} className="text-white py-12">
+      <div style={{ backgroundColor: primary, ...getSecStyle(layout, "hero", 1) }} className="text-white py-12">
         <div className="max-w-6xl mx-auto px-6">
           <h1 className="text-4xl font-extrabold mb-2">{site.name}</h1>
           <p className="text-lg opacity-80">{site.description || "Herramientas y materiales para construccion y hogar."}</p>
         </div>
       </div>
 
-      <section id="productos" className="py-12 bg-gray-50">
+      <section id="productos" className="py-12 bg-gray-50" style={getSecStyle(layout, "products", 2)}>
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-2xl font-bold mb-8 text-gray-900">Catalogo de Productos</h2>
           {site.products.length === 0 ? (
@@ -90,17 +91,19 @@ export default function HardwareTemplate({ site, appointmentsEnabled = true, chi
         </div>
       </section>
 
-      {appointmentsEnabled && (
-        <BookingSection
-          slug={site.slug}
-          siteName={site.name}
-          primaryColor={primary}
-          secondaryColor={site.secondaryColor}
-          services={[]}
-        />
-      )}
+      <div style={getSecStyle(layout, "booking", 3)}>
+        {appointmentsEnabled && (
+          <BookingSection
+            slug={site.slug}
+            siteName={site.name}
+            primaryColor={primary}
+            secondaryColor={site.secondaryColor}
+            services={[]}
+          />
+        )}
+      </div>
 
-      <section id="contacto" className="py-12 bg-gray-50">
+      <section id="contacto" className="py-12 bg-gray-50" style={getSecStyle(layout, "contact", 4)}>
         <div className="max-w-6xl mx-auto px-6 text-center">
           <h2 className="text-2xl font-bold mb-6 text-gray-900">Contactenos</h2>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
@@ -111,8 +114,8 @@ export default function HardwareTemplate({ site, appointmentsEnabled = true, chi
         </div>
       </section>
 
-      {children}
-      <footer style={{ backgroundColor: primary }} className="text-white py-6 text-center text-sm">
+      <div style={getSecStyle(layout, "blocks", 5)}>{children}</div>
+      <footer style={{ backgroundColor: primary, ...getSecStyle(layout, "footer", 6) }} className="text-white py-6 text-center text-sm">
         &copy; {new Date().getFullYear()} {site.name}
       </footer>
     </div>

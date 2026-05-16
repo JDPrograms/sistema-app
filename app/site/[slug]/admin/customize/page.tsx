@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import ImageUpload from "@/components/ui/ImageUpload";
 
 const DAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
 const DEFAULT_HOURS = DAYS.map((day, i) => ({
@@ -134,7 +135,7 @@ export default function CustomizePage() {
   if (loading) return <div className="p-8 text-gray-400">Cargando...</div>;
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Personalizar sitio</h1>
         <p className="text-gray-500 mt-1">Configura todos los aspectos de tu sitio</p>
@@ -171,16 +172,13 @@ export default function CustomizePage() {
                   className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Describe tu negocio en pocas palabras..." />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL del logo</label>
-                <input name="logoUrl" value={form.logoUrl} onChange={(e) => set("logoUrl", e.target.value)}
-                  className={inp} placeholder="https://ejemplo.com/logo.png" />
-                {form.logoUrl && (
-                  <img src={form.logoUrl} alt="logo preview"
-                    className="mt-2 h-16 rounded-lg border border-gray-200 object-contain"
-                    onError={(e) => (e.currentTarget.style.display = "none")} />
-                )}
-              </div>
+              <ImageUpload
+                label="Logo del negocio"
+                value={form.logoUrl}
+                onChange={(url) => set("logoUrl", url)}
+                slug={slug}
+                previewHeight="h-16"
+              />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
@@ -386,8 +384,8 @@ export default function CustomizePage() {
             </div>
             <div className="space-y-2">
               {form.businessHours.map((row, i) => (
-                <div key={row.day} className={`grid grid-cols-[120px_1fr_1fr_1fr] items-center gap-3 py-2.5 px-3 rounded-xl border transition-colors ${row.isOpen ? "border-gray-100 bg-white" : "border-gray-100 bg-gray-50"}`}>
-                  <div className="flex items-center gap-2">
+                <div key={row.day} className={`flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 px-3 rounded-xl border transition-colors ${row.isOpen ? "border-gray-100 bg-white" : "border-gray-100 bg-gray-50"}`}>
+                  <div className="flex items-center gap-2 w-[130px] flex-shrink-0">
                     <button type="button"
                       onClick={() => setHour(i, "isOpen", !row.isOpen)}
                       className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${row.isOpen ? "bg-green-500" : "bg-gray-300"}`}>
@@ -396,23 +394,20 @@ export default function CustomizePage() {
                     <span className={`text-sm font-medium ${row.isOpen ? "text-gray-900" : "text-gray-400"}`}>{row.day}</span>
                   </div>
                   {row.isOpen ? (
-                    <>
-                      <div>
+                    <div className="flex items-center gap-3 flex-wrap flex-1">
+                      <div className="flex-1 min-w-[90px]">
                         <label className="block text-xs text-gray-400 mb-1">Apertura</label>
                         <input type="time" value={row.open} onChange={(e) => setHour(i, "open", e.target.value)}
                           className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-[90px]">
                         <label className="block text-xs text-gray-400 mb-1">Cierre</label>
                         <input type="time" value={row.close} onChange={(e) => setHour(i, "close", e.target.value)}
                           className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       </div>
-                      <div className="text-xs text-gray-400 text-center pt-4">
-                        {row.open} – {row.close}
-                      </div>
-                    </>
+                    </div>
                   ) : (
-                    <div className="col-span-3 text-sm text-gray-400 italic pl-2">Cerrado</div>
+                    <span className="text-sm text-gray-400 italic pl-2">Cerrado</span>
                   )}
                 </div>
               ))}

@@ -34,11 +34,12 @@ export default async function SitePublicPage({ params }: { params: Promise<{ slu
   });
   if (!site) notFound();
 
-  // Raw SQL fallback for pageBlocks — Prisma binary may not include new fields if not regenerated
-  const rawBlocks = await prisma.$queryRaw<{ pageBlocks: string | null }[]>`
-    SELECT "pageBlocks" FROM "Site" WHERE slug = ${slug}
+  // Raw SQL fallback for pageBlocks/layoutConfig — Prisma binary may not include new fields if not regenerated
+  const rawExtra = await prisma.$queryRaw<{ pageBlocks: string | null; layoutConfig: string | null }[]>`
+    SELECT "pageBlocks", "layoutConfig" FROM "Site" WHERE slug = ${slug}
   `;
-  const pageBlocksJson = rawBlocks[0]?.pageBlocks ?? "[]";
+  const pageBlocksJson = rawExtra[0]?.pageBlocks ?? "[]";
+  const layoutConfigJson = rawExtra[0]?.layoutConfig ?? null;
 
   const bannerAds = site.ads.filter((a) => a.type === "banner");
   const mods = (() => { try { return JSON.parse(site.modules || "{}"); } catch { return {}; } })();
@@ -71,7 +72,7 @@ export default async function SitePublicPage({ params }: { params: Promise<{ slu
     <div>
       {bannerAds.length > 0 && <AdsBanner ads={bannerAds as any} primaryColor={site.primaryColor} />}
 
-      <TemplateComponent {...props}>
+      <TemplateComponent {...props} layoutConfig={layoutConfigJson}>
         <BlockRenderer
           blocksJson={pageBlocksJson}
           primaryColor={site.primaryColor}

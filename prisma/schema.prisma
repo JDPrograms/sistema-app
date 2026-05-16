@@ -70,6 +70,7 @@ model Site {
   seoTitle       String?
   seoDescription String?
   pageBlocks     String   @default("[]")
+  layoutConfig   String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

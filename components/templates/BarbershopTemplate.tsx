@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null }
 interface Site {
@@ -7,13 +8,14 @@ interface Site {
   services: Service[];
 }
 
-export default function BarbershopTemplate({ site, appointmentsEnabled = true, children }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode }) {
+export default function BarbershopTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
   const primary = site.primaryColor || "#1a1a1a";
   const secondary = site.secondaryColor || "#c9a96e";
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans">
-      <header style={{ backgroundColor: primary }} className="text-white">
+    <div className="min-h-screen font-sans flex flex-col">
+      <header style={{ backgroundColor: primary, ...getSecStyle(layout, "header", 0) }} className="text-white">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -32,7 +34,7 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
         </div>
       </header>
 
-      <section style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }} className="text-white py-24">
+      <section style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, ...getSecStyle(layout, "hero", 1) }} className="text-white py-24">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h1 className="text-5xl font-extrabold mb-4">{site.name}</h1>
           <p className="text-lg opacity-80 max-w-xl mx-auto mb-8">
@@ -48,7 +50,7 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
         </div>
       </section>
 
-      <section id="servicios" className="py-16 bg-gray-50">
+      <section id="servicios" className="py-16 bg-gray-50" style={getSecStyle(layout, "services", 2)}>
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-10" style={{ color: primary }}>Nuestros Servicios</h2>
           {site.services.length === 0 ? (
@@ -74,17 +76,19 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
         </div>
       </section>
 
-      {appointmentsEnabled && (
-        <BookingSection
-          slug={site.slug}
-          siteName={site.name}
-          primaryColor={primary}
-          secondaryColor={secondary}
-          services={site.services}
-        />
-      )}
+      <div style={getSecStyle(layout, "booking", 3)}>
+        {appointmentsEnabled && (
+          <BookingSection
+            slug={site.slug}
+            siteName={site.name}
+            primaryColor={primary}
+            secondaryColor={secondary}
+            services={site.services}
+          />
+        )}
+      </div>
 
-      <section id="contacto" className="py-16 bg-gray-50">
+      <section id="contacto" className="py-16 bg-gray-50" style={getSecStyle(layout, "contact", 4)}>
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold mb-8" style={{ color: primary }}>Contacto</h2>
           <div className="flex flex-col md:flex-row gap-6 justify-center">
@@ -110,8 +114,8 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
         </div>
       </section>
 
-      {children}
-      <footer style={{ backgroundColor: primary }} className="text-white py-8 text-center text-sm opacity-80">
+      <div style={getSecStyle(layout, "blocks", 5)}>{children}</div>
+      <footer style={{ backgroundColor: primary, ...getSecStyle(layout, "footer", 6) }} className="text-white py-8 text-center text-sm opacity-80">
         &copy; {new Date().getFullYear()} {site.name}. Todos los derechos reservados.
       </footer>
     </div>

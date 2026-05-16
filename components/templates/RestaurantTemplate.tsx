@@ -1,4 +1,5 @@
 import BookingSection from "@/components/booking/BookingSection";
+import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
 interface Product { id: string; name: string; description?: string | null; price?: number | null; category?: string | null }
 interface Site {
@@ -7,13 +8,14 @@ interface Site {
   products: Product[];
 }
 
-export default function RestaurantTemplate({ site, appointmentsEnabled = true, children }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode }) {
+export default function RestaurantTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
   const primary = site.primaryColor || "#dc2626";
   const categories = [...new Set(site.products.map((p) => p.category).filter(Boolean))] as string[];
+  const layout = parseLayoutConfig(layoutConfig);
 
   return (
-    <div className="min-h-screen font-sans bg-amber-50">
-      <header style={{ backgroundColor: primary }} className="text-white">
+    <div className="min-h-screen font-sans bg-amber-50 flex flex-col">
+      <header style={{ backgroundColor: primary, ...getSecStyle(layout, "header", 0) }} className="text-white">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {site.logoUrl ? (
@@ -32,7 +34,7 @@ export default function RestaurantTemplate({ site, appointmentsEnabled = true, c
         </div>
       </header>
 
-      <section style={{ background: `linear-gradient(to right, ${primary}, #b91c1c)` }} className="text-white py-20">
+      <section style={{ background: `linear-gradient(to right, ${primary}, #b91c1c)`, ...getSecStyle(layout, "hero", 1) }} className="text-white py-20">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <h1 className="text-5xl font-extrabold mb-3">{site.name}</h1>
           <p className="text-xl opacity-80">{site.description || "Sabor autentico en cada plato."}</p>
@@ -49,7 +51,7 @@ export default function RestaurantTemplate({ site, appointmentsEnabled = true, c
         </div>
       </section>
 
-      <section id="menu" className="py-16 max-w-5xl mx-auto px-6">
+      <section id="menu" className="py-16 max-w-5xl mx-auto px-6" style={getSecStyle(layout, "menu", 2)}>
         <h2 className="text-3xl font-bold text-center mb-2" style={{ color: primary }}>Nuestro Menu</h2>
         <p className="text-center text-gray-500 mb-10">Ingredientes frescos, preparacion artesanal</p>
 
@@ -87,17 +89,19 @@ export default function RestaurantTemplate({ site, appointmentsEnabled = true, c
         )}
       </section>
 
-      {appointmentsEnabled && (
-        <BookingSection
-          slug={site.slug}
-          siteName={site.name}
-          primaryColor={primary}
-          secondaryColor={site.secondaryColor}
-          services={[]}
-        />
-      )}
+      <div style={getSecStyle(layout, "booking", 3)}>
+        {appointmentsEnabled && (
+          <BookingSection
+            slug={site.slug}
+            siteName={site.name}
+            primaryColor={primary}
+            secondaryColor={site.secondaryColor}
+            services={[]}
+          />
+        )}
+      </div>
 
-      <section id="contacto" className="py-12" style={{ backgroundColor: primary }}>
+      <section id="contacto" className="py-12" style={{ backgroundColor: primary, ...getSecStyle(layout, "contact", 4) }}>
         <div className="max-w-5xl mx-auto px-6 text-center text-white">
           <h2 className="text-2xl font-bold mb-6">Visitanos</h2>
           <div className="flex flex-col md:flex-row gap-4 justify-center">
@@ -108,8 +112,8 @@ export default function RestaurantTemplate({ site, appointmentsEnabled = true, c
         </div>
       </section>
 
-      {children}
-      <footer className="py-6 text-center text-sm text-gray-500">
+      <div style={getSecStyle(layout, "blocks", 5)}>{children}</div>
+      <footer className="py-6 text-center text-sm text-gray-500" style={getSecStyle(layout, "footer", 6)}>
         &copy; {new Date().getFullYear()} {site.name}. Todos los derechos reservados.
       </footer>
     </div>
