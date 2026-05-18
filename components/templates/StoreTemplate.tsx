@@ -1,12 +1,13 @@
 import BookingSection from "@/components/booking/BookingSection";
 import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
-interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
+interface Product { id: string; name: string; description?: string | null; price?: number | null; comparePrice?: number | null; stock?: number | null; imageUrl?: string | null; featured?: boolean; category?: string | null; }
+interface Service { id: string; name: string; price?: number | null; }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string;
   logoUrl?: string; whatsapp?: string; socialLinks?: string;
-  services: Service[];
+  services: Service[]; products: Product[];
 }
 
 export default function StoreTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
@@ -95,34 +96,47 @@ export default function StoreTemplate({ site, appointmentsEnabled = true, childr
       </section>
 
       {/* PRODUCTS GRID */}
-      {site.services.length > 0 && (
+      {(site.products?.length > 0 || site.services.length > 0) && (
         <section id="productos" className="py-20 bg-white" style={getSecStyle(layout, "products", 2)}>
           <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-center justify-between mb-10">
-              <div>
-                <h2 className="text-3xl font-black text-gray-900">Nuestros Productos</h2>
-                <p className="text-gray-500 mt-1">La mejor selección al mejor precio</p>
-              </div>
-              <span className="text-sm text-gray-400">{site.services.length} productos</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {site.services.map((s) => (
-                <div key={s.id} className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-200 group cursor-pointer">
-                  {s.imageUrl
-                    ? <div className="overflow-hidden h-40"><img src={s.imageUrl} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" /></div>
-                    : <div className="h-40 flex items-center justify-center text-4xl" style={{ backgroundColor: `${primary}08` }}>📦</div>}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 text-sm mb-1 line-clamp-2 leading-tight">{s.name}</h3>
-                    {s.description && <p className="text-xs text-gray-400 mb-2 line-clamp-1">{s.description}</p>}
-                    <div className="flex items-center justify-between mt-2">
-                      {s.price != null
-                        ? <p className="font-black text-base" style={{ color: primary }}>${s.price.toFixed(2)}</p>
-                        : <span className="text-xs text-gray-400">Consultar precio</span>}
+            {(() => {
+              const items = site.products?.length > 0 ? site.products : site.services.map((s) => ({ ...s, comparePrice: null, stock: null, featured: false, category: null }));
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-10">
+                    <div>
+                      <h2 className="text-3xl font-black text-gray-900">Nuestros Productos</h2>
+                      <p className="text-gray-500 mt-1">La mejor selección al mejor precio</p>
                     </div>
+                    <span className="text-sm text-gray-400">{items.length} productos</span>
                   </div>
-                </div>
-              ))}
-            </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {items.map((p) => (
+                      <div key={p.id} className={`bg-white rounded-2xl overflow-hidden border hover:shadow-lg transition-all duration-200 group cursor-pointer ${(p as Product).featured ? "border-amber-200 ring-1 ring-amber-100" : "border-gray-100"}`}>
+                        {p.imageUrl
+                          ? <div className="overflow-hidden h-40"><img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" /></div>
+                          : <div className="h-40 flex items-center justify-center text-4xl" style={{ backgroundColor: `${primary}08` }}>📦</div>}
+                        <div className="p-4">
+                          <h3 className="font-bold text-gray-900 text-sm mb-1 line-clamp-2 leading-tight">{p.name}</h3>
+                          {(p as Product).category && <p className="text-xs text-gray-400 mb-1">{(p as Product).category}</p>}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            {p.price != null
+                              ? <p className="font-black text-base" style={{ color: primary }}>${p.price.toFixed(2)}</p>
+                              : <span className="text-xs text-gray-400">Consultar precio</span>}
+                            {(p as Product).comparePrice != null && p.price != null && (p as Product).comparePrice! > p.price && (
+                              <span className="text-xs text-gray-400 line-through">${(p as Product).comparePrice!.toFixed(2)}</span>
+                            )}
+                          </div>
+                          {(p as Product).stock === 0 && (
+                            <span className="text-xs text-red-500 font-semibold mt-1 block">Sin stock</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </section>
       )}

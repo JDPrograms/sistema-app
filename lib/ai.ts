@@ -101,6 +101,22 @@ const TEMPLATE_LABELS: Record<string, string> = {
 
 const FORMAT_RULES = "REGLAS: Responde en español. Texto plano sin asteriscos, sin guiones de lista, sin numeracion, sin markdown. Respuestas cortas y directas (max 3 oraciones salvo que pidan mas detalle). Eres el asistente de este negocio especifico.";
 
+const ADMIN_ACTIONS_PROMPT = `
+ACCIONES DISPONIBLES: Puedes ejecutar cambios reales en el sitio cuando el admin lo solicite explicitamente.
+Cuando necesites ejecutar una accion, incluye al FINAL de tu respuesta un bloque especial en esta forma exacta (sin espacios extra):
+@@ACCION@@{"tipo":"TIPO","datos":{...}}@@FIN@@
+
+Tipos de accion:
+- actualizar_info → actualiza datos del negocio: {"nombre":"","descripcion":"","telefono":"","email":"","direccion":"","whatsapp":"","primaryColor":""}
+- crear_servicio → crea servicio: {"nombre":"","descripcion":"","precio":0,"duracion":0}
+- actualizar_servicio → edita servicio (requiere id): {"id":"","nombre":"","descripcion":"","precio":0,"duracion":0}
+- crear_producto → crea producto: {"nombre":"","descripcion":"","precio":0,"comparePrice":0,"categoria":"","imageUrl":"","stock":0}
+- actualizar_producto → edita producto (requiere id): {"id":"","nombre":"","descripcion":"","precio":0,"categoria":"","stock":0}
+
+IMPORTANTE: Solo incluye el bloque @@ACCION@@ cuando el admin PIDE EXPLICITAMENTE hacer un cambio. En respuestas informativas o preguntas NO lo incluyas.
+Si el dato no fue proporcionado, omite ese campo del JSON (no pongas valores vacios o cero innecesariamente).
+`;
+
 export async function buildPublicContext(slug: string, agentSystemPrompt: string): Promise<string> {
   const site = await prisma.site.findUnique({
     where: { slug },
@@ -195,7 +211,7 @@ export async function buildAdminContext(slug: string, agentSystemPrompt: string)
   if (site.staff.length > 0) {
     lines.push("\nPersonal:");
     site.staff.forEach((m) => {
-      let line = `  ${m.name}`;
+      let line = `  ${m.name} [id:${m.id}]`;
       if (m.specialty) line += ` (${m.specialty})`;
       if (m.email) line += ` - ${m.email}`;
       lines.push(line);
@@ -205,7 +221,7 @@ export async function buildAdminContext(slug: string, agentSystemPrompt: string)
   if (site.services.length > 0) {
     lines.push("\nServicios activos:");
     site.services.forEach((s) => {
-      let line = `  ${s.name}`;
+      let line = `  ${s.name} [id:${s.id}]`;
       if (s.price) line += ` $${s.price}`;
       if (s.duration) line += ` ${s.duration}min`;
       if (s.description) line += ` - ${s.description}`;
@@ -216,7 +232,7 @@ export async function buildAdminContext(slug: string, agentSystemPrompt: string)
   if (site.products.length > 0) {
     lines.push("\nProductos activos:");
     site.products.forEach((p) => {
-      let line = `  ${p.name}`;
+      let line = `  ${p.name} [id:${p.id}]`;
       if (p.price) line += ` $${p.price}`;
       if (p.category) line += ` [${p.category}]`;
       if (p.stock !== null && p.stock !== undefined) line += ` stock:${p.stock}`;
@@ -233,6 +249,7 @@ export async function buildAdminContext(slug: string, agentSystemPrompt: string)
 
   lines.push("=== FIN DEL CONTEXTO ADMIN ===");
   lines.push(FORMAT_RULES);
+  lines.push(ADMIN_ACTIONS_PROMPT);
 
   return agentSystemPrompt + "\n\n" + lines.join("\n");
 }

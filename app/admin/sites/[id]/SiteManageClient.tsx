@@ -35,6 +35,7 @@ const MODULE_CONFIG = [
   { key: "users", label: "Usuarios", desc: "Registro e inicio de sesion de clientes", icon: "👥" },
   { key: "customize", label: "Personalizar", desc: "Colores, logo, descripcion y contacto", icon: "🎨" },
   { key: "ai", label: "Inteligencia Artificial", desc: "Agentes IA, chat publico y asistente admin", icon: "🤖" },
+  { key: "support", label: "Soporte en Vivo", desc: "Chat en vivo con clientes y transferencia a agente humano", icon: "💬" },
 ];
 
 function parseMods(s: string): Record<string, boolean> {
@@ -113,12 +114,19 @@ export default function SiteManageClient({ site }: { site: Site }) {
   }
 
   const quickLinks = [
-    { href: `/site/${site.slug}/admin/appointments`, label: "Citas", icon: "📅", desc: "Reservas y agenda" },
-    { href: `/site/${site.slug}/admin/customize`, label: "Personalizar", icon: "🎨", desc: "Colores, logo, descripcion, contacto" },
-    { href: `/site/${site.slug}/admin/content`, label: "Contenido", icon: "📋", desc: "Servicios y productos" },
-    { href: `/site/${site.slug}/admin/ads`, label: "Publicidades", icon: "📢", desc: "Banners y anuncios" },
-    { href: `/site/${site.slug}/admin/users`, label: "Usuarios", icon: "👥", desc: "Clientes registrados" },
-    { href: `/site/${site.slug}/admin/staff`, label: "Personal", icon: "🧑‍💼", desc: "Equipo y asignacion de citas" },
+    { href: `/site/${site.slug}/admin`,              label: "Dashboard",       icon: "📊", desc: "Panel principal y métricas" },
+    { href: `/site/${site.slug}/admin/appointments`, label: "Citas",           icon: "📅", desc: "Reservas y agenda" },
+    { href: `/site/${site.slug}/admin/staff`,        label: "Personal",        icon: "🧑‍💼", desc: "Equipo y asignacion de citas" },
+    { href: `/site/${site.slug}/admin/products`,     label: "Productos",       icon: "📦", desc: "Catalogo de productos y stock" },
+    { href: `/site/${site.slug}/admin/content`,      label: "Contenido",       icon: "📋", desc: "Servicios y paginas" },
+    { href: `/site/${site.slug}/admin/billing`,      label: "Contabilidad",    icon: "🧾", desc: "Facturas, gastos e inventario" },
+    { href: `/site/${site.slug}/admin/customize`,    label: "Personalizar",    icon: "🎨", desc: "Colores, logo, contacto" },
+    { href: `/site/${site.slug}/admin/sections`,     label: "Secciones",       icon: "⊞",  desc: "Secciones del sitio publico" },
+    { href: `/site/${site.slug}/admin/builder`,      label: "Constructor",     icon: "✦",  desc: "Constructor visual de paginas" },
+    { href: `/site/${site.slug}/admin/ads`,          label: "Publicidades",    icon: "📢", desc: "Banners y anuncios" },
+    { href: `/site/${site.slug}/admin/users`,        label: "Usuarios",        icon: "👥", desc: "Clientes registrados" },
+    { href: `/site/${site.slug}/admin/ai`,           label: "IA",              icon: "🤖", desc: "Agentes y asistente IA" },
+    { href: `/site/${site.slug}/admin/admins`,       label: "Administradores", icon: "🔐", desc: "Admins del sitio" },
   ];
 
   return (
@@ -137,7 +145,7 @@ export default function SiteManageClient({ site }: { site: Site }) {
             Abrir panel completo →
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {quickLinks.map((link) => (
             <Link key={link.href} href={link.href}
               className="bg-white rounded-lg border border-blue-100 px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all flex items-center gap-3">
@@ -200,7 +208,7 @@ export default function SiteManageClient({ site }: { site: Site }) {
         {/* Modulos individuales */}
         <div className="divide-y divide-gray-50">
           {MODULE_CONFIG.map(({ key, label, desc, icon }) => {
-            const enabled = mods[key] !== false;
+            const enabled = mods[key] === true;
             return (
               <div key={key} className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-3">

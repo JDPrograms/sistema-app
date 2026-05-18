@@ -25,10 +25,14 @@ export async function PATCH(
       name: body.name,
       description: body.description ?? null,
       price: body.price != null ? Number(body.price) : null,
+      comparePrice: body.comparePrice != null ? Number(body.comparePrice) : null,
       stock: body.stock != null ? Number(body.stock) : null,
+      lowStockAlert: body.lowStockAlert != null ? Number(body.lowStockAlert) : null,
+      sku: body.sku ?? null,
       category: body.category ?? null,
       imageUrl: body.imageUrl ?? null,
-      isActive: body.isActive,
+      featured: body.featured ?? false,
+      isActive: body.isActive ?? true,
     },
   });
   return NextResponse.json(product);

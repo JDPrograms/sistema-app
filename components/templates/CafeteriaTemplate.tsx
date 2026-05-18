@@ -1,12 +1,13 @@
 import BookingSection from "@/components/booking/BookingSection";
 import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
-interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
+interface Product { id: string; name: string; description?: string | null; price?: number | null; comparePrice?: number | null; stock?: number | null; imageUrl?: string | null; featured?: boolean; }
+interface Service { id: string; name: string; description?: string | null; price?: number | null; imageUrl?: string | null; }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string;
   logoUrl?: string; whatsapp?: string; socialLinks?: string;
-  services: Service[];
+  services: Service[]; products: Product[];
 }
 
 export default function CafeteriaTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
@@ -61,29 +62,41 @@ export default function CafeteriaTemplate({ site, appointmentsEnabled = true, ch
       </section>
 
       {/* MENU HIGHLIGHTS */}
-      {site.services.length > 0 && (
+      {(site.products?.length > 0 || site.services.length > 0) && (
         <section id="menu" className="py-20 bg-white" style={getSecStyle(layout, "menu", 2)}>
           <div className="max-w-6xl mx-auto px-6">
             <h2 className="text-4xl font-black text-center mb-3" style={{ color: primary }}>Nuestro Menú</h2>
             <p className="text-center text-gray-500 mb-12">Preparado con los mejores ingredientes</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {site.services.map((s) => (
-                <div key={s.id} className="rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow border border-gray-100">
-                  {s.imageUrl
-                    ? <img src={s.imageUrl} alt={s.name} className="w-full h-48 object-cover" />
-                    : <div className="w-full h-48 flex items-center justify-center text-5xl" style={{ backgroundColor: `${primary}15` }}>🍽️</div>}
-                  <div className="p-5">
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">{s.name}</h3>
-                    {s.description && <p className="text-gray-500 text-sm mb-3 line-clamp-2">{s.description}</p>}
-                    {s.price != null && (
-                      <span className="inline-block px-4 py-1 rounded-full text-white text-sm font-bold" style={{ backgroundColor: primary }}>
-                        ${s.price.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
+            {(() => {
+              const items: Product[] = site.products?.length > 0
+                ? site.products
+                : site.services.map((s) => ({ ...s, comparePrice: null, stock: null, featured: false }));
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {items.map((p) => (
+                    <div key={p.id} className="rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow border border-gray-100">
+                      {p.imageUrl
+                        ? <img src={p.imageUrl} alt={p.name} className="w-full h-48 object-cover" />
+                        : <div className="w-full h-48 flex items-center justify-center text-5xl" style={{ backgroundColor: `${primary}15` }}>🍽️</div>}
+                      <div className="p-5">
+                        <h3 className="font-bold text-lg text-gray-900 mb-2">{p.name}</h3>
+                        {p.description && <p className="text-gray-500 text-sm mb-3 line-clamp-2">{p.description}</p>}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {p.price != null && (
+                            <span className="inline-block px-4 py-1 rounded-full text-white text-sm font-bold" style={{ backgroundColor: primary }}>
+                              ${p.price.toFixed(2)}
+                            </span>
+                          )}
+                          {p.comparePrice != null && p.price != null && p.comparePrice > p.price && (
+                            <span className="text-sm text-gray-400 line-through">${p.comparePrice.toFixed(2)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
         </section>
       )}

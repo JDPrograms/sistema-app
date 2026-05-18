@@ -52,7 +52,7 @@ model Site {
   template       String
   isActive       Boolean  @default(true)
   hasAdminPanel  Boolean  @default(true)
-  modules        String   @default("{\"appointments\":true,\"content\":true,\"ads\":true,\"users\":true,\"customize\":true,\"ai\":true}")
+  modules        String   @default("{}")
   primaryColor   String   @default("#3b82f6")
   secondaryColor String   @default("#1e40af")
   logoUrl        String?
@@ -76,15 +76,22 @@ model Site {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  admins       SiteAdmin[]
-  users        SiteUser[]
-  pages        SitePage[]
-  services     SiteService[]
-  products     SiteProduct[]
-  ads          SiteAd[]
-  appointments SiteAppointment[]
-  staff        SiteStaff[]
-  aiAgents     AiAgent[]
+  billingConfig  String   @default("{}")
+
+  admins         SiteAdmin[]
+  users          SiteUser[]
+  pages          SitePage[]
+  services       SiteService[]
+  products       SiteProduct[]
+  ads            SiteAd[]
+  appointments   SiteAppointment[]
+  staff          SiteStaff[]
+  aiAgents       AiAgent[]
+  invoices       SiteInvoice[]
+  expenses       SiteExpense[]
+  inventoryLogs  SiteInventoryLog[]
+  chatSessions   SiteChatSession[]
+  chatAgents     SiteChatAgent[]
 }
 
 model SiteAdmin {
@@ -147,18 +154,22 @@ model SiteService {
 }
 
 model SiteProduct {
-  id          String   @id @default(cuid())
-  siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  price       Float?
-  stock       Int?
-  imageUrl    String?
-  category    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  siteId         String
+  site           Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  price          Float?
+  comparePrice   Float?
+  stock          Int?
+  lowStockAlert  Int?
+  sku            String?
+  category       String?
+  imageUrl       String?
+  featured       Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model SiteStaff {
@@ -209,4 +220,106 @@ model SiteAd {
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model SiteInvoice {
+  id            String    @id @default(cuid())
+  siteId        String
+  site          Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  type          String    @default("invoice") // "invoice" | "quote"
+  number        String
+  clientName    String
+  clientEmail   String?
+  clientPhone   String?
+  clientAddress String?
+  status        String    @default("draft") // draft|sent|paid|cancelled|accepted|rejected
+  items         String    @default("[]")
+  subtotal      Float     @default(0)
+  taxRate       Float     @default(0)
+  discount      Float     @default(0)
+  total         Float     @default(0)
+  notes         String?
+  dueDate       DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([siteId])
+}
+
+model SiteExpense {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  category    String?
+  date        DateTime @default(now())
+  receipt     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([siteId])
+}
+
+model SiteInventoryLog {
+  id            String   @id @default(cuid())
+  siteId        String
+  site          Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  productId     String
+  productName   String
+  type          String   // "in" | "out" | "adjustment"
+  quantity      Int
+  previousStock Int?
+  newStock      Int?
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  @@index([siteId])
+}
+
+model SiteChatSession {
+  id                String            @id @default(cuid())
+  siteId            String
+  site              Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  clientName        String?
+  clientEmail       String?
+  status            String            @default("bot") // bot|waiting|human|resolved
+  assignedAdminId   String?
+  assignedAdminName String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  messages          SiteChatMessage[]
+
+  @@index([siteId])
+  @@index([status])
+}
+
+model SiteChatMessage {
+  id        String          @id @default(cuid())
+  sessionId String
+  session   SiteChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String          // "user" | "bot" | "human"
+  content   String
+  adminId   String?
+  adminName String?
+  createdAt DateTime        @default(now())
+
+  @@index([sessionId])
+}
+
+model SiteChatAgent {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  adminId     String
+  adminName   String
+  adminEmail  String
+  isAlwaysOn  Boolean  @default(false)
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@unique([siteId, adminId])
+  @@index([siteId])
 }

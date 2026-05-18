@@ -84,17 +84,22 @@ export default async function SiteAdminLayout({
   const mods = (() => { try { return JSON.parse(site.modules || "{}"); } catch { return {}; } })();
   const expiryStatus = getExpiryStatus(site as any);
 
+  const show = (key: string) => isSuperAdmin || mods[key] === true;
+
   const navLinks = [
     { href: `/site/${slug}/admin`, label: "Dashboard" },
-    ...(mods.appointments !== false ? [{ href: `/site/${slug}/admin/appointments`, label: "Citas" }] : []),
-    ...(mods.appointments !== false ? [{ href: `/site/${slug}/admin/staff`, label: "Personal" }] : []),
-    ...(mods.customize !== false ? [{ href: `/site/${slug}/admin/customize`, label: "Personalizar" }] : []),
-    ...(mods.customize !== false ? [{ href: `/site/${slug}/admin/sections`, label: "Secciones ⟡" }] : []),
-    ...(mods.customize !== false ? [{ href: `/site/${slug}/admin/builder`, label: "Constructor ✦" }] : []),
-    ...(mods.content !== false ? [{ href: `/site/${slug}/admin/content`, label: "Contenido" }] : []),
-    ...(mods.ads !== false ? [{ href: `/site/${slug}/admin/ads`, label: "Publicidades" }] : []),
-    ...(mods.users !== false ? [{ href: `/site/${slug}/admin/users`, label: "Usuarios" }] : []),
-    ...(mods.ai !== false ? [{ href: `/site/${slug}/admin/ai`, label: "IA" }] : []),
+    ...(show("appointments") ? [{ href: `/site/${slug}/admin/appointments`, label: "Citas" }] : []),
+    ...(show("appointments") ? [{ href: `/site/${slug}/admin/staff`, label: "Personal" }] : []),
+    ...(show("content") ? [{ href: `/site/${slug}/admin/products`, label: "Productos 📦" }] : []),
+    ...(show("content") ? [{ href: `/site/${slug}/admin/content`, label: "Contenido" }] : []),
+    { href: `/site/${slug}/admin/billing`, label: "Contabilidad 🧾" },
+    ...(show("customize") ? [{ href: `/site/${slug}/admin/customize`, label: "Personalizar" }] : []),
+    ...(show("customize") ? [{ href: `/site/${slug}/admin/sections`, label: "Secciones ⟡" }] : []),
+    ...(show("customize") ? [{ href: `/site/${slug}/admin/builder`, label: "Constructor ✦" }] : []),
+    ...(show("ads") ? [{ href: `/site/${slug}/admin/ads`, label: "Publicidades" }] : []),
+    ...(show("users") ? [{ href: `/site/${slug}/admin/users`, label: "Usuarios" }] : []),
+    ...(show("ai") ? [{ href: `/site/${slug}/admin/ai`, label: "IA" }] : []),
+    ...(show("support") ? [{ href: `/site/${slug}/admin/support`, label: "Soporte 💬" }] : []),
     { href: `/site/${slug}/admin/admins`, label: "Administradores" },
   ];
 
@@ -147,7 +152,7 @@ export default async function SiteAdminLayout({
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
 
-        {mods.ai !== false && (
+        {(isSuperAdmin || mods.ai === true) && (
           <AdminChat agentId={site.adminAgentId ?? undefined} siteSlug={slug} siteName={site.name} />
         )}
       </div>

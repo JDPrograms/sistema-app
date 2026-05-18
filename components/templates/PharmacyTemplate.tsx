@@ -1,12 +1,13 @@
 import BookingSection from "@/components/booking/BookingSection";
 import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
-interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
+interface Product { id: string; name: string; description?: string | null; price?: number | null; comparePrice?: number | null; stock?: number | null; imageUrl?: string | null; featured?: boolean; category?: string | null; }
+interface Service { id: string; name: string; description?: string | null; price?: number | null; imageUrl?: string | null; }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string;
   logoUrl?: string; whatsapp?: string; socialLinks?: string;
-  services: Service[];
+  services: Service[]; products: Product[];
 }
 
 export default function PharmacyTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
@@ -104,27 +105,40 @@ export default function PharmacyTemplate({ site, appointmentsEnabled = true, chi
       </section>
 
       {/* PRODUCTS / SERVICES CATALOG */}
-      {site.services.length > 0 && (
+      {(site.products?.length > 0 || site.services.length > 0) && (
         <section id="productos" className="py-20 bg-white" style={getSecStyle(layout, "products", 2)}>
           <div className="max-w-6xl mx-auto px-6">
             <h2 className="text-3xl font-black text-gray-900 text-center mb-3">Productos y Servicios</h2>
             <p className="text-gray-500 text-center mb-12">Encuentra todo lo que necesitas para tu bienestar</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {site.services.map((s) => (
-                <div key={s.id} className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow group">
-                  {s.imageUrl
-                    ? <img src={s.imageUrl} alt={s.name} className="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-300" />
-                    : <div className="w-full h-36 flex items-center justify-center text-4xl" style={{ backgroundColor: `${primary}10` }}>💊</div>}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 text-sm mb-1 line-clamp-2">{s.name}</h3>
-                    {s.description && <p className="text-xs text-gray-400 mb-2 line-clamp-2">{s.description}</p>}
-                    {s.price != null && (
-                      <p className="text-base font-black" style={{ color: primary }}>${s.price.toFixed(2)}</p>
-                    )}
-                  </div>
+            {(() => {
+              const items: Product[] = site.products?.length > 0
+                ? site.products
+                : site.services.map((s) => ({ ...s, comparePrice: null, stock: null, featured: false, category: null }));
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {items.map((p) => (
+                    <div key={p.id} className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow group">
+                      {p.imageUrl
+                        ? <img src={p.imageUrl} alt={p.name} className="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-300" />
+                        : <div className="w-full h-36 flex items-center justify-center text-4xl" style={{ backgroundColor: `${primary}10` }}>💊</div>}
+                      <div className="p-4">
+                        <h3 className="font-bold text-gray-900 text-sm mb-1 line-clamp-2">{p.name}</h3>
+                        {p.description && <p className="text-xs text-gray-400 mb-2 line-clamp-2">{p.description}</p>}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {p.price != null && (
+                            <p className="text-base font-black" style={{ color: primary }}>${p.price.toFixed(2)}</p>
+                          )}
+                          {p.comparePrice != null && p.price != null && p.comparePrice > p.price && (
+                            <span className="text-xs text-gray-400 line-through">${p.comparePrice.toFixed(2)}</span>
+                          )}
+                        </div>
+                        {p.stock === 0 && <span className="text-xs text-red-500 font-semibold mt-1 block">Sin stock</span>}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
         </section>
       )}

@@ -1,7 +1,7 @@
 import BookingSection from "@/components/booking/BookingSection";
 import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
-interface Product { id: string; name: string; description?: string | null; price?: number | null; stock?: number | null; category?: string | null }
+interface Product { id: string; name: string; description?: string | null; price?: number | null; comparePrice?: number | null; stock?: number | null; imageUrl?: string | null; featured?: boolean; category?: string | null; }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string; logoUrl?: string;
@@ -65,18 +65,23 @@ export default function HardwareTemplate({ site, appointmentsEnabled = true, chi
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {site.products.map((p) => (
-                  <div key={p.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="h-40 flex items-center justify-center text-4xl" style={{ backgroundColor: `${primary}15` }}>
-                      🔧
-                    </div>
+                  <div key={p.id} className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow ${p.featured ? "border-amber-200" : "border-gray-200"}`}>
+                    {p.imageUrl
+                      ? <img src={p.imageUrl} alt={p.name} className="w-full h-40 object-cover" />
+                      : <div className="h-40 flex items-center justify-center text-4xl" style={{ backgroundColor: `${primary}15` }}>🔧</div>}
                     <div className="p-4">
                       {p.category && <p className="text-xs text-gray-400 mb-1">{p.category}</p>}
                       <h3 className="font-semibold text-gray-900">{p.name}</h3>
                       {p.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{p.description}</p>}
-                      <div className="flex items-center justify-between mt-3">
-                        {p.price != null && (
-                          <span className="font-bold text-lg" style={{ color: primary }}>${p.price.toFixed(2)}</span>
-                        )}
+                      <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
+                        <div className="flex items-center gap-2">
+                          {p.price != null && (
+                            <span className="font-bold text-lg" style={{ color: primary }}>${p.price.toFixed(2)}</span>
+                          )}
+                          {p.comparePrice != null && p.price != null && p.comparePrice > p.price && (
+                            <span className="text-xs text-gray-400 line-through">${p.comparePrice.toFixed(2)}</span>
+                          )}
+                        </div>
                         {p.stock != null && (
                           <span className={`text-xs px-2 py-0.5 rounded-full ${p.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                             {p.stock > 0 ? `Stock: ${p.stock}` : "Agotado"}

@@ -39,6 +39,15 @@ export async function POST(req: Request) {
       name,
       slug,
       template,
+      modules: JSON.stringify({
+        appointments: false,
+        content: false,
+        ads: false,
+        users: false,
+        customize: false,
+        ai: false,
+        support: false,
+      }),
       ...(primaryColor && { primaryColor }),
       admins: {
         create: { email: adminEmail, name: adminName, password: hashedPassword },

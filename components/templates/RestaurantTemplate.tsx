@@ -1,7 +1,7 @@
 import BookingSection from "@/components/booking/BookingSection";
 import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
-interface Product { id: string; name: string; description?: string | null; price?: number | null; category?: string | null }
+interface Product { id: string; name: string; description?: string | null; price?: number | null; comparePrice?: number | null; imageUrl?: string | null; category?: string | null; }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string; logoUrl?: string;
@@ -75,19 +75,24 @@ export default function RestaurantTemplate({ site, appointmentsEnabled = true, c
                   {cat && <h3 className="text-xl font-bold text-gray-800 mb-4 border-b border-amber-200 pb-2">{cat}</h3>}
                   <div className="space-y-3">
                     {items.map((p) => (
-                      <div key={p.id} className="bg-white rounded-xl p-5 flex items-center justify-between shadow-sm">
+                      <div key={p.id} className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${primary}15` }}>
-                            🍽️
-                          </div>
+                          {p.imageUrl
+                            ? <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                            : <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ backgroundColor: `${primary}15` }}>🍽️</div>}
                           <div>
                             <h4 className="font-semibold text-gray-900">{p.name}</h4>
                             {p.description && <p className="text-sm text-gray-500">{p.description}</p>}
                           </div>
                         </div>
-                        {p.price != null && (
-                          <span className="font-bold text-xl" style={{ color: primary }}>${p.price.toFixed(2)}</span>
-                        )}
+                        <div className="text-right flex-shrink-0">
+                          {p.price != null && (
+                            <span className="font-bold text-xl" style={{ color: primary }}>${p.price.toFixed(2)}</span>
+                          )}
+                          {p.comparePrice != null && p.price != null && p.comparePrice > p.price && (
+                            <p className="text-xs text-gray-400 line-through">${p.comparePrice.toFixed(2)}</p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
