@@ -12,15 +12,21 @@ interface ChatSession {
   id: string; clientName?: string | null; clientEmail?: string | null;
   status: "bot" | "waiting" | "human" | "resolved";
   assignedAdminId?: string | null; assignedAdminName?: string | null;
+  queueId?: string | null; queueName?: string | null;
   createdAt: string; updatedAt: string;
   messages?: ChatMessage[];
   _count?: { messages: number };
 }
+interface Queue {
+  id: string; name: string; description?: string | null; isDefault: boolean;
+  agents: SupportAgent[];
+  _count: { sessions: number };
+}
 interface SupportAgent {
   id: string; adminId: string; adminName: string; adminEmail: string;
   isAlwaysOn: boolean; isAvailable: boolean;
+  queues?: { id: string; name: string }[];
 }
-interface SiteAdmin { id: string; name: string; email: string; }
 
 const STATUS_INFO: Record<string, { label: string; cls: string; dot: string }> = {
   bot:      { label: "Bot",         cls: "bg-blue-100 text-blue-700",   dot: "bg-blue-400" },
@@ -54,19 +60,27 @@ export default function SupportPage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  const [tab, setTab] = useState<"chats" | "agents">("chats");
-  const [filter, setFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
+  const [tab, setTab] = useState<"chats" | "agents" | "queues">("chats");
+  const [statusFilter, setStatusFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
+  const [queueFilter, setQueueFilter] = useState<string>("all");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [admins, setAdmins] = useState<SiteAdmin[]>([]);
   const [agents, setAgents] = useState<SupportAgent[]>([]);
+  const [queues, setQueues] = useState<Queue[]>([]);
   const [myInfo, setMyInfo] = useState<{ id: string; name: string; email: string } | null>(null);
   const [msgInput, setMsgInput] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Agent form
   const [agentForm, setAgentForm] = useState({ adminId: "", adminName: "", adminEmail: "", isAlwaysOn: false });
   const [savingAgent, setSavingAgent] = useState(false);
+
+  // Queue form
+  const [queueForm, setQueueForm] = useState({ name: "", description: "", isDefault: false });
+  const [savingQueue, setSavingQueue] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // ── Load data ─────────────────────────────────────────────────
@@ -76,11 +90,13 @@ export default function SupportPage() {
   }, [slug]);
 
   const loadAgents = useCallback(async () => {
-    const [agentsRes, adminsRes] = await Promise.all([
-      fetch(`/api/site/${slug}/support/agents`),
-      fetch(`/api/admin/sites`).then(() => null).catch(() => null),
-    ]);
-    if (agentsRes.ok) setAgents(await agentsRes.json());
+    const res = await fetch(`/api/site/${slug}/support/agents`);
+    if (res.ok) setAgents(await res.json());
+  }, [slug]);
+
+  const loadQueues = useCallback(async () => {
+    const res = await fetch(`/api/site/${slug}/support/queues`);
+    if (res.ok) setQueues(await res.json());
   }, [slug]);
 
   const loadSession = useCallback(async (id: string) => {
@@ -95,20 +111,19 @@ export default function SupportPage() {
   useEffect(() => {
     async function init() {
       setLoading(true);
-      // Get my session info
       const sessRes = await fetch("/api/auth/session");
       if (sessRes.ok) {
         const s = await sessRes.json();
         const u = s?.user;
         if (u) setMyInfo({ id: u.id || u.adminId || "", name: u.name || "", email: u.email || "" });
       }
-      await Promise.all([loadSessions(), loadAgents()]);
+      await Promise.all([loadSessions(), loadAgents(), loadQueues()]);
       setLoading(false);
     }
     init();
-  }, [loadSessions, loadAgents]);
+  }, [loadSessions, loadAgents, loadQueues]);
 
-  // Polling — refresh sessions and active conversation every 4s
+  // Polling every 4s
   useEffect(() => {
     const t = setInterval(() => {
       loadSessions();
@@ -150,10 +165,7 @@ export default function SupportPage() {
       body: JSON.stringify({ status: "resolved" }),
     });
     await loadSessions();
-    if (activeSession?.id === sessionId) {
-      setActiveSession(null);
-      setMessages([]);
-    }
+    if (activeSession?.id === sessionId) { setActiveSession(null); setMessages([]); }
   }
 
   async function sendMsg() {
@@ -178,7 +190,7 @@ export default function SupportPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...agentForm, adminId: agentForm.adminId || agentForm.adminEmail }),
     });
-    await loadAgents();
+    await Promise.all([loadAgents(), loadQueues()]);
     setAgentForm({ adminId: "", adminName: "", adminEmail: "", isAlwaysOn: false });
     setSavingAgent(false);
   }
@@ -188,7 +200,7 @@ export default function SupportPage() {
     loadAgents();
   }
 
-  async function toggleAgent(agent: SupportAgent) {
+  async function toggleAgentAvailability(agent: SupportAgent) {
     await fetch(`/api/site/${slug}/support/agents/${agent.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -197,9 +209,64 @@ export default function SupportPage() {
     loadAgents();
   }
 
+  async function saveQueue() {
+    if (!queueForm.name.trim()) return;
+    setSavingQueue(true);
+    await fetch(`/api/site/${slug}/support/queues`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(queueForm),
+    });
+    await loadQueues();
+    setQueueForm({ name: "", description: "", isDefault: false });
+    setSavingQueue(false);
+  }
+
+  async function deleteQueue(id: string) {
+    await fetch(`/api/site/${slug}/support/queues/${id}`, { method: "DELETE" });
+    loadQueues();
+  }
+
+  async function addAgentToQueue(queueId: string, agentId: string) {
+    await fetch(`/api/site/${slug}/support/queues/${queueId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ addAgentId: agentId }),
+    });
+    await Promise.all([loadQueues(), loadAgents()]);
+  }
+
+  async function removeAgentFromQueue(queueId: string, agentId: string) {
+    await fetch(`/api/site/${slug}/support/queues/${queueId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ removeAgentId: agentId }),
+    });
+    await Promise.all([loadQueues(), loadAgents()]);
+  }
+
+  async function setQueueDefault(queueId: string) {
+    await fetch(`/api/site/${slug}/support/queues/${queueId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isDefault: true }),
+    });
+    loadQueues();
+  }
+
   // ── Filtered sessions ─────────────────────────────────────────
-  const filtered = sessions.filter((s) => filter === "all" || s.status === filter);
+  const filtered = sessions.filter((s) => {
+    const matchStatus = statusFilter === "all" || s.status === statusFilter;
+    const matchQueue = queueFilter === "all" || s.queueId === queueFilter || (queueFilter === "__none" && !s.queueId);
+    return matchStatus && matchQueue;
+  });
   const waitingCount = sessions.filter((s) => s.status === "waiting").length;
+
+  // Agents not in a given queue (for the add-to-queue dropdown)
+  function agentsNotInQueue(q: Queue) {
+    const inQueue = new Set(q.agents.map((a) => a.id));
+    return agents.filter((a) => !inQueue.has(a.id));
+  }
 
   if (loading) return <div className="p-8 text-gray-400">Cargando...</div>;
 
@@ -216,17 +283,152 @@ export default function SupportPage() {
           )}
         </div>
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          <button onClick={() => setTab("chats")} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === "chats" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
-            Conversaciones
-          </button>
-          <button onClick={() => setTab("agents")} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === "agents" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
-            Agentes
-          </button>
+          {(["chats", "agents", "queues"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
+              {t === "chats" ? "Conversaciones" : t === "agents" ? "Agentes" : "Colas"}
+            </button>
+          ))}
         </div>
       </div>
 
-      {tab === "agents" ? (
-        /* ── AGENTS TAB ─────────────────────────────────────────── */
+      {/* ── QUEUES TAB ────────────────────────────────────────────── */}
+      {tab === "queues" && (
+        <div className="flex-1 overflow-auto p-6 space-y-6">
+          {/* Create queue */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            <h2 className="font-bold text-gray-900 mb-1">Crear cola de atención</h2>
+            <p className="text-sm text-gray-400 mb-4">
+              Las colas agrupan conversaciones por tipo. Los clientes eligen la cola al solicitar un agente.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nombre de la cola *</label>
+                <input value={queueForm.name} onChange={(e) => setQueueForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Ej: Soporte Técnico, Ventas, Info General"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Descripción (opcional)</label>
+                <input value={queueForm.description} onChange={(e) => setQueueForm((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="¿Qué tipo de consultas atiende?"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <button onClick={() => setQueueForm((p) => ({ ...p, isDefault: !p.isDefault }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${queueForm.isDefault ? "bg-blue-600" : "bg-gray-200"}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${queueForm.isDefault ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+              <div>
+                <p className="text-sm font-medium text-gray-800">Cola predeterminada</p>
+                <p className="text-xs text-gray-400">Los chats sin cola asignada se enrutan aquí.</p>
+              </div>
+            </div>
+            <button onClick={saveQueue} disabled={savingQueue || !queueForm.name.trim()}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors">
+              {savingQueue ? "Creando..." : "Crear cola"}
+            </button>
+          </div>
+
+          {/* Queue list */}
+          {queues.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-3xl mb-2">📋</p>
+              <p className="text-sm">No hay colas creadas. Crea una para empezar a organizar tu soporte.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {queues.map((q) => {
+                const notInQueue = agentsNotInQueue(q);
+                return (
+                  <div key={q.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    {/* Queue header */}
+                    <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">
+                          {q.name[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-gray-900">{q.name}</p>
+                            {q.isDefault && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Predeterminada</span>
+                            )}
+                          </div>
+                          {q.description && <p className="text-xs text-gray-400">{q.description}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">{q._count.sessions} conversacion(es)</span>
+                        {!q.isDefault && (
+                          <button onClick={() => setQueueDefault(q.id)}
+                            className="text-xs text-blue-600 hover:text-blue-800 transition-colors">
+                            Hacer predeterminada
+                          </button>
+                        )}
+                        <button onClick={() => deleteQueue(q.id)}
+                          className="text-xs text-red-500 hover:text-red-700 transition-colors">
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Agents in this queue */}
+                    <div className="px-5 py-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        Agentes asignados ({q.agents.length})
+                      </p>
+                      {q.agents.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic mb-2">Sin agentes asignados</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {q.agents.map((a) => (
+                            <div key={a.id} className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5">
+                              <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold">
+                                {a.adminName[0]}
+                              </div>
+                              <span className="text-xs font-medium text-gray-800">{a.adminName}</span>
+                              {a.isAlwaysOn && (
+                                <span className="text-xs text-blue-500">● siempre</span>
+                              )}
+                              <button onClick={() => removeAgentFromQueue(q.id, a.id)}
+                                className="text-gray-300 hover:text-red-500 transition-colors leading-none ml-0.5">×</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add agent to queue */}
+                      {notInQueue.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <select
+                            onChange={(e) => { if (e.target.value) { addAgentToQueue(q.id, e.target.value); e.target.value = ""; } }}
+                            className="text-xs border border-dashed border-gray-300 rounded-lg px-2 py-1 text-gray-500 focus:outline-none focus:border-blue-400">
+                            <option value="">+ Agregar agente a esta cola</option>
+                            {notInQueue.map((a) => (
+                              <option key={a.id} value={a.id}>{a.adminName}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {notInQueue.length === 0 && agents.length > 0 && q.agents.length === agents.length && (
+                        <p className="text-xs text-gray-400 italic">Todos los agentes están asignados a esta cola</p>
+                      )}
+                      {agents.length === 0 && (
+                        <p className="text-xs text-gray-400 italic">Primero crea agentes en la pestaña Agentes</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── AGENTS TAB ────────────────────────────────────────────── */}
+      {tab === "agents" && (
         <div className="flex-1 overflow-auto p-6 space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h2 className="font-bold text-gray-900 mb-1">Agregar agente de soporte</h2>
@@ -235,12 +437,14 @@ export default function SupportPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
                 <input value={agentForm.adminName} onChange={(e) => setAgentForm((p) => ({ ...p, adminName: e.target.value }))}
-                  placeholder="Juan Lopez" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  placeholder="Juan Lopez"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                 <input value={agentForm.adminEmail} onChange={(e) => setAgentForm((p) => ({ ...p, adminEmail: e.target.value }))}
-                  placeholder="juan@empresa.com" className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  placeholder="juan@empresa.com"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
             <div className="flex items-center gap-3 mb-4">
@@ -250,7 +454,9 @@ export default function SupportPage() {
               </button>
               <div>
                 <p className="text-sm font-medium text-gray-800">Siempre activo</p>
-                <p className="text-xs text-gray-400">Le llegarán todas las conversaciones automáticamente. Si está desactivado, solo se asigna manualmente.</p>
+                <p className="text-xs text-gray-400">
+                  Se auto-asigna en las colas donde esté registrado. Si está desactivado, el admin lo asigna manualmente.
+                </p>
               </div>
             </div>
             <button onClick={saveAgent} disabled={savingAgent || !agentForm.adminName || !agentForm.adminEmail}
@@ -268,43 +474,58 @@ export default function SupportPage() {
             ) : (
               <div className="divide-y divide-gray-50">
                 {agents.map((a) => (
-                  <div key={a.id} className="px-5 py-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700 text-sm">
-                        {a.adminName[0]}
+                  <div key={a.id} className="px-5 py-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700 text-sm">
+                          {a.adminName[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{a.adminName}</p>
+                          <p className="text-xs text-gray-400">{a.adminEmail}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{a.adminName}</p>
-                        <p className="text-xs text-gray-400">{a.adminEmail}</p>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${a.isAlwaysOn ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+                          {a.isAlwaysOn ? "Siempre activo" : "Manual"}
+                        </span>
+                        <button onClick={() => toggleAgentAvailability(a)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${a.isAvailable ? "bg-green-500" : "bg-gray-200"}`}>
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${a.isAvailable ? "translate-x-4.5" : "translate-x-0.5"}`} />
+                        </button>
+                        <span className="text-xs text-gray-400">{a.isAvailable ? "Disponible" : "No disponible"}</span>
+                        <button onClick={() => deleteAgent(a.id)} className="text-xs text-red-500 hover:text-red-700 transition-colors">Eliminar</button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${a.isAlwaysOn ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
-                        {a.isAlwaysOn ? "Siempre activo" : "Manual"}
-                      </span>
-                      <button onClick={() => toggleAgent(a)}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${a.isAvailable ? "bg-green-500" : "bg-gray-200"}`}>
-                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${a.isAvailable ? "translate-x-4.5" : "translate-x-0.5"}`} />
-                      </button>
-                      <span className="text-xs text-gray-400">{a.isAvailable ? "Disponible" : "No disponible"}</span>
-                      <button onClick={() => deleteAgent(a.id)} className="text-xs text-red-500 hover:text-red-700 transition-colors">Eliminar</button>
-                    </div>
+                    {/* Queue badges for this agent */}
+                    {a.queues && a.queues.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1 pl-12">
+                        {a.queues.map((q) => (
+                          <span key={q.id} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{q.name}</span>
+                        ))}
+                      </div>
+                    )}
+                    {(!a.queues || a.queues.length === 0) && (
+                      <p className="text-xs text-amber-600 mt-1 pl-12">Sin colas asignadas — asígnalas en la pestaña Colas</p>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
-      ) : (
-        /* ── CHATS TAB ──────────────────────────────────────────── */
+      )}
+
+      {/* ── CHATS TAB ────────────────────────────────────────────── */}
+      {tab === "chats" && (
         <div className="flex-1 flex min-h-0">
           {/* Session list */}
           <div className="w-72 flex-shrink-0 border-r border-gray-100 flex flex-col bg-white">
-            {/* Filter bar */}
+            {/* Status filter */}
             <div className="p-3 border-b border-gray-100 flex gap-1 flex-wrap">
               {(["all", "waiting", "human", "bot", "resolved"] as const).map((f) => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${filter === f ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                <button key={f} onClick={() => setStatusFilter(f)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${statusFilter === f ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
                   {f === "all" ? "Todos" : STATUS_INFO[f]?.label}
                   {f === "waiting" && waitingCount > 0 && (
                     <span className="ml-1 bg-white text-amber-600 rounded-full px-1">{waitingCount}</span>
@@ -312,6 +533,26 @@ export default function SupportPage() {
                 </button>
               ))}
             </div>
+
+            {/* Queue filter */}
+            {queues.length > 0 && (
+              <div className="px-3 py-2 border-b border-gray-100 flex gap-1 flex-wrap">
+                <button onClick={() => setQueueFilter("all")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${queueFilter === "all" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                  Todas las colas
+                </button>
+                {queues.map((q) => (
+                  <button key={q.id} onClick={() => setQueueFilter(q.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${queueFilter === q.id ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                    {q.name}
+                  </button>
+                ))}
+                <button onClick={() => setQueueFilter("__none")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${queueFilter === "__none" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                  Sin cola
+                </button>
+              </div>
+            )}
 
             {/* Sessions */}
             <div className="flex-1 overflow-auto">
@@ -325,14 +566,19 @@ export default function SupportPage() {
                       <p className="text-sm font-semibold text-gray-900 truncate">{s.clientName || "Cliente anónimo"}</p>
                       <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(s.updatedAt)}</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
                       <StatusBadge status={s.status} />
-                      {s._count && s._count.messages > 0 && (
-                        <span className="text-xs text-gray-400">{s._count.messages} msgs</span>
+                      {s.queueName && (
+                        <span className="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full font-medium">
+                          {s.queueName}
+                        </span>
                       )}
                     </div>
                     {s.assignedAdminName && (
                       <p className="text-xs text-gray-400 mt-0.5">→ {s.assignedAdminName}</p>
+                    )}
+                    {s._count && s._count.messages > 0 && (
+                      <p className="text-xs text-gray-300 mt-0.5">{s._count.messages} msgs</p>
                     )}
                   </button>
                 ))
@@ -355,13 +601,20 @@ export default function SupportPage() {
             ) : (
               <>
                 {/* Chat header */}
-                <div className="px-5 py-3.5 bg-white border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                <div className="px-5 py-3.5 bg-white border-b border-gray-100 flex items-center justify-between flex-shrink-0 flex-wrap gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
                       {(activeSession.clientName || "?")[0].toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900">{activeSession.clientName || "Cliente anónimo"}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900">{activeSession.clientName || "Cliente anónimo"}</p>
+                        {activeSession.queueName && (
+                          <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                            {activeSession.queueName}
+                          </span>
+                        )}
+                      </div>
                       {activeSession.clientEmail && <p className="text-xs text-gray-400">{activeSession.clientEmail}</p>}
                     </div>
                     <StatusBadge status={activeSession.status} />
@@ -379,13 +632,31 @@ export default function SupportPage() {
                         Reasignarme
                       </button>
                     )}
-                    {agents.filter((a) => a.adminId !== myInfo?.id).length > 0 && activeSession.status !== "resolved" && (
+                    {/* Assign dropdown — show agents from session's queue first */}
+                    {activeSession.status !== "resolved" && agents.filter((a) => a.adminId !== myInfo?.id).length > 0 && (
                       <div className="relative group">
                         <button className="border border-gray-200 hover:border-gray-300 text-gray-600 px-3 py-2 rounded-xl text-xs font-medium transition-colors">
                           Asignar ▾
                         </button>
-                        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-10 min-w-40 hidden group-hover:block">
-                          {agents.filter((a) => a.adminId !== myInfo?.id).map((a) => (
+                        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-10 min-w-48 hidden group-hover:block">
+                          {/* Queue agents first */}
+                          {activeSession.queueId && (() => {
+                            const qAgents = agents.filter((a) => a.adminId !== myInfo?.id && a.queues?.some((q) => q.id === activeSession.queueId));
+                            return qAgents.length > 0 ? (
+                              <>
+                                <p className="px-3 pt-2 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide">Cola: {activeSession.queueName}</p>
+                                {qAgents.map((a) => (
+                                  <button key={a.id} onClick={() => assignTo(activeSession.id, a)}
+                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 transition-colors">
+                                    {a.adminName} {a.isAlwaysOn ? "★" : ""}
+                                  </button>
+                                ))}
+                                <div className="border-t border-gray-100 my-1" />
+                              </>
+                            ) : null;
+                          })()}
+                          {/* All other agents */}
+                          {agents.filter((a) => a.adminId !== myInfo?.id && (!activeSession.queueId || !a.queues?.some((q) => q.id === activeSession.queueId))).map((a) => (
                             <button key={a.id} onClick={() => assignTo(activeSession.id, a)}
                               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl">
                               {a.adminName}
@@ -410,7 +681,7 @@ export default function SupportPage() {
                       {m.role === "system" ? (
                         <p className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{m.content}</p>
                       ) : (
-                        <div className={`max-w-xs lg:max-w-md`}>
+                        <div className="max-w-xs lg:max-w-md">
                           {(m.role === "bot" || m.role === "human") && (
                             <p className="text-xs text-gray-400 mb-0.5 px-1">
                               {m.role === "bot" ? "🤖 Bot" : `👤 ${m.adminName || "Agente"}`}
@@ -433,7 +704,7 @@ export default function SupportPage() {
                   <div ref={bottomRef} />
                 </div>
 
-                {/* Input — only when in human mode and assigned to me */}
+                {/* Input */}
                 {activeSession.status === "human" && (
                   <div className="p-3 bg-white border-t border-gray-100 flex gap-2 flex-shrink-0">
                     <input
@@ -451,7 +722,9 @@ export default function SupportPage() {
                 )}
                 {activeSession.status === "waiting" && (
                   <div className="p-3 bg-amber-50 border-t border-amber-100 text-center text-xs text-amber-700 flex-shrink-0">
-                    El cliente está esperando un agente. Haz clic en <strong>Tomar control</strong> para chatear.
+                    El cliente está esperando un agente
+                    {activeSession.queueName && ` en la cola "${activeSession.queueName}"`}.
+                    Haz clic en <strong>Tomar control</strong> para chatear.
                   </div>
                 )}
                 {activeSession.status === "resolved" && (

@@ -92,6 +92,7 @@ model Site {
   inventoryLogs  SiteInventoryLog[]
   chatSessions   SiteChatSession[]
   chatAgents     SiteChatAgent[]
+  supportQueues  SupportQueue[]
 }
 
 model SiteAdmin {
@@ -280,27 +281,31 @@ model SiteInventoryLog {
 }
 
 model SiteChatSession {
-  id                String            @id @default(cuid())
+  id                String         @id @default(cuid())
   siteId            String
-  site              Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site              Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
   clientName        String?
   clientEmail       String?
-  status            String            @default("bot") // bot|waiting|human|resolved
+  status            String         @default("bot") // bot|waiting|human|resolved
   assignedAdminId   String?
   assignedAdminName String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  queueId           String?
+  queueName         String?
+  queue             SupportQueue?  @relation(fields: [queueId], references: [id], onDelete: SetNull)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   messages          SiteChatMessage[]
 
   @@index([siteId])
   @@index([status])
+  @@index([queueId])
 }
 
 model SiteChatMessage {
   id        String          @id @default(cuid())
   sessionId String
   session   SiteChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  role      String          // "user" | "bot" | "human"
+  role      String          // "user" | "bot" | "human" | "system"
   content   String
   adminId   String?
   adminName String?
@@ -310,16 +315,31 @@ model SiteChatMessage {
 }
 
 model SiteChatAgent {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site        Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
   adminId     String
   adminName   String
   adminEmail  String
-  isAlwaysOn  Boolean  @default(false)
-  isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  isAlwaysOn  Boolean        @default(false)
+  isAvailable Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  queues      SupportQueue[]
 
   @@unique([siteId, adminId])
+  @@index([siteId])
+}
+
+model SupportQueue {
+  id          String          @id @default(cuid())
+  siteId      String
+  site        Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isDefault   Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  agents      SiteChatAgent[]
+  sessions    SiteChatSession[]
+
   @@index([siteId])
 }
