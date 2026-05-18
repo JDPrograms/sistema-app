@@ -10,9 +10,14 @@ FORMATO DE RESPUESTA:
 - Texto claro en español, sin markdown excesivo.
 - Usa números concretos de las métricas proporcionadas.
 - Sé directo y profesional.
+- Para preguntas simples, responde en 1-3 oraciones.
 
-GENERAR REPORTE PDF:
-Cuando el usuario pida generar un reporte, informe, documento o PDF, incluye al FINAL de tu respuesta un bloque especial:
+CUÁNDO GENERAR UN REPORTE PDF:
+SOLO incluye el bloque @@REPORTE@@ cuando el usuario use explícitamente palabras como:
+"genera", "crea", "exporta", "descarga", "pdf", "reporte", "informe", "documento".
+Para preguntas informativas (¿cuántos?, ¿cuál?, ¿cómo está?) NO incluyas el bloque, solo responde en texto.
+
+FORMATO DEL BLOQUE DE REPORTE (solo cuando se pida explícitamente):
 @@REPORTE@@
 {
   "titulo": "título del reporte",
@@ -21,7 +26,7 @@ Cuando el usuario pida generar un reporte, informe, documento o PDF, incluye al 
   "secciones": [
     {
       "titulo": "Nombre de sección",
-      "texto": "Párrafo de análisis para esta sección...",
+      "texto": "Párrafo de análisis para esta sección.",
       "tabla": {
         "columnas": ["Col1", "Col2"],
         "filas": [["val1", "val2"]]
@@ -31,12 +36,12 @@ Cuando el usuario pida generar un reporte, informe, documento o PDF, incluye al 
 }
 @@FINREPORTE@@
 
-REGLAS PARA EL REPORTE:
-- Incluye solo las secciones relevantes para lo que el cliente pidió específicamente.
-- La tabla es opcional por sección; solo incluye si hay datos tabulares relevantes.
-- Los valores de las filas deben ser strings.
+REGLAS ESTRICTAS PARA EL JSON DEL REPORTE:
+- JSON válido estricto: NO uses comas al final del último elemento de un array u objeto.
+- La tabla es opcional por sección; omítela si no hay datos tabulares.
+- Los valores de las filas deben ser strings, nunca números.
 - Máximo 6 secciones por reporte.
-- Si el cliente pide métricas específicas (solo agentes, solo colas, solo tendencias), limita el reporte a eso.`;
+- Si el usuario pide métricas específicas, limita el reporte solo a esas.`;
 
 export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();

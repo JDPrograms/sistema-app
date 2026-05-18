@@ -70,7 +70,9 @@ function parseReport(text: string): { clean: string; report: Report | null } {
   const match = text.match(/@@REPORTE@@([\s\S]*?)@@FINREPORTE@@/);
   if (!match) return { clean: text.trim(), report: null };
   try {
-    const report = JSON.parse(match[1].trim()) as Report;
+    // Strip trailing commas before ] or } to handle AI JSON quirks
+    const sanitized = match[1].trim().replace(/,(\s*[}\]])/g, "$1");
+    const report = JSON.parse(sanitized) as Report;
     const clean = text.replace(/@@REPORTE@@[\s\S]*?@@FINREPORTE@@/, "").trim();
     return { clean, report };
   } catch { return { clean: text.trim(), report: null }; }
