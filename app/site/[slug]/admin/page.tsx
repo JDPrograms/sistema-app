@@ -76,6 +76,9 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
   const mods = (() => { try { return JSON.parse(site.modules || "{}"); } catch { return {}; } })();
   const billingCfg = (() => { try { return JSON.parse((site as any).billingConfig || "{}"); } catch { return {}; } })();
   const cur = billingCfg.currency || "$";
+  // products module: fall back to content for backwards compat with old sites
+  const hasProducts = mods.products === true || (mods.products === undefined && mods.content === true);
+  const hasBilling = mods.billing === true;
 
   const now = new Date();
   const today = now.toISOString().split("T")[0];
@@ -175,18 +178,18 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
   const profitLastMonth = incomeLastMonth - expenseLastMonth;
   const pendingInvoiceAmt = pendingInvoicesRaw._sum.total ?? 0;
   const pendingInvoiceCount = pendingInvoicesRaw._count;
-  const hasBillingData = totalInvoiceCount > 0 || expenseThisMonth > 0;
+  const hasBillingData = hasBilling && (totalInvoiceCount > 0 || expenseThisMonth > 0);
   const alertCount = outOfStockProducts.length + overdueInvoices.length + (pendingCount > 5 ? 1 : 0);
 
   const quickLinks = [
     ...(mods.appointments === true ? [{ href: `/site/${slug}/admin/appointments`, icon: "📅", label: "Citas", desc: `${pendingCount} pendientes` }] : []),
     ...(mods.appointments === true ? [{ href: `/site/${slug}/admin/staff`, icon: "🧑‍💼", label: "Personal", desc: `${site._count.staff} miembros` }] : []),
-    ...(mods.content === true ? [{ href: `/site/${slug}/admin/products`, icon: "📦", label: "Productos", desc: `${activeProductCount} activos` }] : []),
+    ...(hasProducts ? [{ href: `/site/${slug}/admin/products`, icon: "📦", label: "Productos", desc: `${activeProductCount} activos` }] : []),
     ...(mods.content === true ? [{ href: `/site/${slug}/admin/content`, icon: "📋", label: "Contenido", desc: "Servicios y páginas" }] : []),
     ...(mods.customize === true ? [{ href: `/site/${slug}/admin/customize`, icon: "🎨", label: "Personalizar", desc: "Colores y logo" }] : []),
     ...(mods.ads === true ? [{ href: `/site/${slug}/admin/ads`, icon: "📢", label: "Publicidades", desc: `${site._count.ads} activas` }] : []),
     ...(mods.users === true ? [{ href: `/site/${slug}/admin/users`, icon: "👥", label: "Usuarios", desc: `${site._count.users} registrados` }] : []),
-    { href: `/site/${slug}/admin/billing`, icon: "🧾", label: "Contabilidad", desc: hasBillingData ? `${cur}${incomeThisMonth.toFixed(0)} este mes` : "Sin datos aún" },
+    ...(hasBilling ? [{ href: `/site/${slug}/admin/billing`, icon: "🧾", label: "Contabilidad", desc: hasBillingData ? `${cur}${incomeThisMonth.toFixed(0)} este mes` : "Sin datos aún" }] : []),
     ...(mods.ai === true ? [{ href: `/site/${slug}/admin/ai`, icon: "🤖", label: "IA", desc: `${site._count.aiAgents} agentes` }] : []),
   ];
 
@@ -205,10 +208,12 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
           <p className="text-sm text-gray-500">{templateLabels[site.template] ?? site.template} · /site/{slug}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <Link href={`/site/${slug}/admin/billing`}
-            className="hidden sm:flex items-center gap-1.5 text-sm border border-gray-200 px-3 py-2 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
-            🧾 Contabilidad
-          </Link>
+          {hasBilling && (
+            <Link href={`/site/${slug}/admin/billing`}
+              className="hidden sm:flex items-center gap-1.5 text-sm border border-gray-200 px-3 py-2 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
+              🧾 Contabilidad
+            </Link>
+          )}
           <Link href={`/site/${slug}`} target="_blank"
             className="flex items-center gap-1.5 text-sm border border-gray-200 px-3 py-2 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
             Ver sitio ↗
@@ -238,7 +243,7 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
             sub={`${newUsersLastMonth} mes anterior`} accent="#8b5cf6"
             trend={<Trend cur={newUsersThisMonth} prev={newUsersLastMonth} />} />
         )}
-        {mods.content === true && activeProductCount > 0 && (
+        {hasProducts && activeProductCount > 0 && (
           <StatCard icon="📦" label="Productos activos" value={activeProductCount}
             sub={outOfStockProducts.length > 0 ? `${outOfStockProducts.length} sin stock` : "Stock OK"}
             accent={outOfStockProducts.length > 0 ? "#f59e0b" : "#10b981"} />
@@ -485,7 +490,7 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
               {[
                 { icon: "👥", label: "Usuarios", value: site._count.users, enabled: mods.users === true },
                 { icon: "📋", label: "Servicios", value: site._count.services, enabled: mods.content === true },
-                { icon: "📦", label: "Productos", value: site._count.products, enabled: mods.content === true },
+                { icon: "📦", label: "Productos", value: site._count.products, enabled: hasProducts },
                 { icon: "📢", label: "Publicidades", value: site._count.ads, enabled: mods.ads === true },
                 { icon: "🤖", label: "Agentes IA", value: site._count.aiAgents, enabled: mods.ai === true },
               ].filter(i => i.enabled).map(item => (
@@ -560,7 +565,7 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
         )}
 
         {/* Inventario de productos */}
-        {mods.content === true && site._count.products > 0 && (
+        {hasProducts && site._count.products > 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 text-sm">📦 Estado del Inventario</h3>
@@ -614,7 +619,7 @@ export default async function SiteAdminDashboard({ params }: { params: Promise<{
                 { icon: "👥", label: "Usuarios registrados", value: site._count.users, enabled: mods.users === true, href: `/site/${slug}/admin/users` },
                 { icon: "🧑‍💼", label: "Personal activo", value: site._count.staff, enabled: mods.appointments === true, href: `/site/${slug}/admin/staff` },
                 { icon: "📋", label: "Servicios", value: site._count.services, enabled: mods.content === true, href: `/site/${slug}/admin/content` },
-                { icon: "📦", label: "Productos", value: site._count.products, enabled: mods.content === true, href: `/site/${slug}/admin/products` },
+                { icon: "📦", label: "Productos", value: site._count.products, enabled: hasProducts, href: `/site/${slug}/admin/products` },
                 { icon: "📢", label: "Publicidades activas", value: site._count.ads, enabled: mods.ads === true, href: `/site/${slug}/admin/ads` },
                 { icon: "🤖", label: "Agentes IA", value: site._count.aiAgents, enabled: mods.ai === true, href: `/site/${slug}/admin/ai` },
               ].filter(i => i.enabled).map(item => (

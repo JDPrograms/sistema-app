@@ -29,13 +29,15 @@ const templateLabels: Record<string, string> = {
 };
 
 const MODULE_CONFIG = [
-  { key: "appointments", label: "Citas", desc: "Sistema de reservas para clientes", icon: "📅" },
-  { key: "content", label: "Contenido", desc: "Servicios y productos del negocio", icon: "📋" },
-  { key: "ads", label: "Publicidades", desc: "Banners y anuncios del sitio", icon: "📢" },
-  { key: "users", label: "Usuarios", desc: "Registro e inicio de sesion de clientes", icon: "👥" },
-  { key: "customize", label: "Personalizar", desc: "Colores, logo, descripcion y contacto", icon: "🎨" },
-  { key: "ai", label: "Inteligencia Artificial", desc: "Agentes IA, chat publico y asistente admin", icon: "🤖" },
-  { key: "support", label: "Soporte en Vivo", desc: "Chat en vivo con clientes y transferencia a agente humano", icon: "💬" },
+  { key: "appointments", label: "Citas",             desc: "Sistema de reservas y agenda para clientes", icon: "📅" },
+  { key: "content",      label: "Contenido",         desc: "Servicios del negocio y paginas de contenido", icon: "📋" },
+  { key: "products",     label: "Productos",         desc: "Catalogo de productos con stock, precios y categorias", icon: "📦" },
+  { key: "billing",      label: "Contabilidad",      desc: "Facturas, cotizaciones, gastos e inventario", icon: "🧾" },
+  { key: "ads",          label: "Publicidades",      desc: "Banners y anuncios del sitio", icon: "📢" },
+  { key: "users",        label: "Usuarios",          desc: "Registro e inicio de sesion de clientes", icon: "👥" },
+  { key: "customize",    label: "Personalizar",      desc: "Colores, logo, descripcion y datos de contacto", icon: "🎨" },
+  { key: "ai",           label: "Inteligencia Artificial", desc: "Agentes IA, chat publico y asistente admin", icon: "🤖" },
+  { key: "support",      label: "Soporte en Vivo",   desc: "Chat en vivo con clientes y transferencia a agente humano", icon: "💬" },
 ];
 
 function parseMods(s: string): Record<string, boolean> {

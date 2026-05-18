@@ -42,6 +42,8 @@ export async function POST(req: Request) {
       modules: JSON.stringify({
         appointments: false,
         content: false,
+        products: false,
+        billing: false,
         ads: false,
         users: false,
         customize: false,
