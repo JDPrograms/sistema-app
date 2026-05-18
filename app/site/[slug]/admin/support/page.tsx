@@ -263,6 +263,14 @@ export default function SupportPage() {
   });
   const waitingCount = sessions.filter((s) => s.status === "waiting").length;
 
+  // Pre-compute queue-split agents for assign dropdown (avoids IIFE in JSX)
+  const assignQueueAgents = activeSession?.queueId
+    ? agents.filter((a) => a.adminId !== myInfo?.id && a.queues?.some((q) => q.id === activeSession.queueId))
+    : [];
+  const assignOtherAgents = agents.filter(
+    (a) => a.adminId !== myInfo?.id && !assignQueueAgents.some((qa) => qa.id === a.id)
+  );
+
   // Agents not in a given queue (for the add-to-queue dropdown)
   function agentsNotInQueue(q: Queue) {
     const inQueue = new Set(q.agents.map((a) => a.id));
@@ -647,23 +655,22 @@ export default function SupportPage() {
                         </button>
                         <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-10 min-w-48 hidden group-hover:block">
                           {/* Queue agents first */}
-                          {activeSession.queueId && (() => {
-                            const qAgents = agents.filter((a) => a.adminId !== myInfo?.id && a.queues?.some((q) => q.id === activeSession.queueId));
-                            return qAgents.length > 0 ? (
-                              <>
-                                <p className="px-3 pt-2 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide">Cola: {activeSession.queueName}</p>
-                                {qAgents.map((a) => (
-                                  <button key={a.id} onClick={() => assignTo(activeSession.id, a)}
-                                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 transition-colors">
-                                    {a.adminName} {a.isAlwaysOn ? "★" : ""}
-                                  </button>
-                                ))}
-                                <div className="border-t border-gray-100 my-1" />
-                              </>
-                            ) : null;
-                          })()}
+                          {assignQueueAgents.length > 0 && (
+                            <>
+                              <p className="px-3 pt-2 pb-1 text-xs font-bold text-gray-400 uppercase tracking-wide">
+                                Cola: {activeSession.queueName}
+                              </p>
+                              {assignQueueAgents.map((a) => (
+                                <button key={a.id} onClick={() => assignTo(activeSession.id, a)}
+                                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 transition-colors">
+                                  {a.adminName} {a.isAlwaysOn ? "★" : ""}
+                                </button>
+                              ))}
+                              <div className="border-t border-gray-100 my-1" />
+                            </>
+                          )}
                           {/* All other agents */}
-                          {agents.filter((a) => a.adminId !== myInfo?.id && (!activeSession.queueId || !a.queues?.some((q) => q.id === activeSession.queueId))).map((a) => (
+                          {assignOtherAgents.map((a) => (
                             <button key={a.id} onClick={() => assignTo(activeSession.id, a)}
                               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors first:rounded-t-xl last:rounded-b-xl">
                               {a.adminName}
