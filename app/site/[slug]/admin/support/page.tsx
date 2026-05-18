@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────
 interface ChatMessage {
@@ -282,13 +283,19 @@ export default function SupportPage() {
             </span>
           )}
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          {(["chats", "agents", "queues"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
-              {t === "chats" ? "Conversaciones" : t === "agents" ? "Agentes" : "Colas"}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <Link href={`/site/${slug}/admin/support/metrics`}
+            className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors">
+            <span>📊</span> Métricas
+          </Link>
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+            {(["chats", "agents", "queues"] as const).map((t) => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
+                {t === "chats" ? "Conversaciones" : t === "agents" ? "Agentes" : "Colas"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
