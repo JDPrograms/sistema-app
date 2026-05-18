@@ -59,75 +59,107 @@ function KPICard({ label, value, sub, color = "blue", icon }: { label: string; v
   );
 }
 
+// ── CSV helpers ────────────────────────────────────────────────────
+// Wrap a value in quotes and escape internal quotes
+function q(v: string | number): string {
+  const s = String(v);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+// Row builder: pad to a given width with empty cells
+function row(...cells: (string | number)[]): string { return cells.map(q).join(","); }
+// Section title row (bold-looking in Excel when col A is wide)
+function section(title: string, cols = 5): string { return [q(title), ...Array(cols - 1).fill("")].join(","); }
+
 // ── CSV export ─────────────────────────────────────────────────────
 function downloadCSV(metrics: Metrics, slug: string, rangeDays: number) {
   const s = metrics.summary;
-  const date = new Date().toISOString().split("T")[0];
+  const date = new Date().toLocaleDateString("es", { day: "2-digit", month: "2-digit", year: "numeric" });
   const rows: string[] = [];
 
-  rows.push("MÉTRICAS DE SOPORTE — " + slug.toUpperCase());
-  rows.push(`Período analizado,${rangeDays} días`);
-  rows.push(`Generado,${date}`);
+  // ── File header ─────────────────────────────────────────────────
+  rows.push(row("MÉTRICAS DE SOPORTE", slug.toUpperCase(), "", "Período:", `${rangeDays} días`));
+  rows.push(row("Generado:", date, "", "Total histórico:", s.allTime));
   rows.push("");
 
-  rows.push("RESUMEN GENERAL");
-  rows.push("Métrica,Valor");
-  rows.push(`Total conversaciones (período),${s.total}`);
-  rows.push(`Hoy,${s.today}`);
-  rows.push(`Esta semana,${s.thisWeek}`);
-  rows.push(`Este mes,${s.thisMonth}`);
-  rows.push(`Total histórico,${s.allTime}`);
-  rows.push(`Tasa de escalación,${s.escalationRate}%`);
-  rows.push(`Tasa de resolución,${s.resolutionRate}%`);
-  rows.push(`Autoservicio bot,${s.botResolutionRate}%`);
-  rows.push(`Tiempo promedio de espera,${s.avgWaitMinutes != null ? s.avgWaitMinutes + " min" : "Sin datos"}`);
-  rows.push(`Tiempo promedio de resolución,${s.avgResMinutes != null ? s.avgResMinutes + " min" : "Sin datos"}`);
+  // ── Resumen general (2 cols) ─────────────────────────────────────
+  rows.push(section("── RESUMEN GENERAL ──", 5));
+  rows.push(row("Métrica", "Valor"));
+  rows.push(row("Conversaciones en el período", s.total));
+  rows.push(row("Hoy", s.today));
+  rows.push(row("Esta semana", s.thisWeek));
+  rows.push(row("Este mes", s.thisMonth));
+  rows.push(row("Tasa de escalación", `${s.escalationRate}%`));
+  rows.push(row("Tasa de resolución (de escalados)", `${s.resolutionRate}%`));
+  rows.push(row("Autoservicio bot (sin humano)", `${s.botResolutionRate}%`));
+  rows.push(row("Tiempo promedio de espera", s.avgWaitMinutes != null ? `${s.avgWaitMinutes} min` : "Sin datos"));
+  rows.push(row("Tiempo promedio de resolución", s.avgResMinutes != null ? `${s.avgResMinutes} min` : "Sin datos"));
   rows.push("");
 
-  rows.push("DISTRIBUCIÓN POR ESTADO");
-  rows.push("Estado,Cantidad");
-  rows.push(`Bot,${s.byStatus.bot}`);
-  rows.push(`Esperando agente,${s.byStatus.waiting}`);
-  rows.push(`Atención humana,${s.byStatus.human}`);
-  rows.push(`Resueltos,${s.byStatus.resolved}`);
+  // ── Distribución por estado (3 cols) ────────────────────────────
+  rows.push(section("── DISTRIBUCIÓN POR ESTADO ──", 5));
+  rows.push(row("Estado", "Cantidad", "% del total"));
+  const statuses = [
+    ["Bot (sin escalar)", s.byStatus.bot],
+    ["Esperando agente",  s.byStatus.waiting],
+    ["Atención humana",   s.byStatus.human],
+    ["Resueltos",         s.byStatus.resolved],
+  ] as const;
+  statuses.forEach(([label, count]) => {
+    const pct = s.total > 0 ? Math.round((count / s.total) * 100) : 0;
+    rows.push(row(label, count, `${pct}%`));
+  });
   rows.push("");
 
+  // ── Colas (5 cols) ───────────────────────────────────────────────
   if (metrics.queues.length > 0) {
-    rows.push("COLAS");
-    rows.push("Cola,Total,Esperando,Resueltos,Tasa resolución");
-    metrics.queues.forEach((q) => {
-      const rate = q.count > 0 ? Math.round((q.resolved / q.count) * 100) : 0;
-      rows.push(`${q.name},${q.count},${q.waiting},${q.resolved},${rate}%`);
+    rows.push(section("── COLAS ──", 5));
+    rows.push(row("Cola", "Total", "Esperando", "Resueltos", "Tasa resolución"));
+    metrics.queues.forEach((q2) => {
+      const rate = q2.count > 0 ? Math.round((q2.resolved / q2.count) * 100) : 0;
+      rows.push(row(q2.name, q2.count, q2.waiting, q2.resolved, `${rate}%`));
     });
     rows.push("");
   }
 
+  // ── Agentes (6 cols) ─────────────────────────────────────────────
   if (metrics.agents.length > 0) {
-    rows.push("AGENTES");
-    rows.push("Agente,Email,Atendidas,Resueltas,Efectividad,Disponible,Siempre activo");
-    metrics.agents.forEach((a) => {
+    rows.push(section("── AGENTES ──", 6));
+    rows.push(row("Agente", "Email", "Atendidas", "Resueltas", "Efectividad", "Disponible"));
+    metrics.agents.sort((a, b) => b.handled - a.handled).forEach((a) => {
       const eff = a.handled > 0 ? Math.round((a.resolved / a.handled) * 100) : 0;
-      rows.push(`${a.name},${a.email},${a.handled},${a.resolved},${eff}%,${a.isAvailable ? "Sí" : "No"},${a.isAlwaysOn ? "Sí" : "No"}`);
+      rows.push(row(a.name, a.email, a.handled, a.resolved, `${eff}%`, a.isAvailable ? "Sí" : "No"));
     });
     rows.push("");
   }
 
-  rows.push("TENDENCIA DIARIA");
-  rows.push("Fecha,Total,Escalados,Resueltos");
-  metrics.trend.forEach((t) => rows.push(`${t.date},${t.total},${t.escalated},${t.resolved}`));
+  // ── Tendencia diaria (5 cols) ─────────────────────────────────────
+  const trendData = metrics.trend.filter((t) => t.total > 0 || metrics.trend.slice(-7).includes(t));
+  rows.push(section("── TENDENCIA DIARIA ──", 5));
+  rows.push(row("Fecha", "Total", "Escalados", "Resueltos", "Tasa escalación"));
+  trendData.forEach((t) => {
+    const rate = t.total > 0 ? Math.round((t.escalated / t.total) * 100) : 0;
+    // Prefix with apostrophe trick to force text (prevents date auto-conversion)
+    rows.push(row(`'${t.date}`, t.total, t.escalated, t.resolved, `${rate}%`));
+  });
   rows.push("");
 
-  rows.push("HORAS PICO");
-  rows.push("Hora,Conversaciones");
-  metrics.peakHours.filter((h) => h.count > 0).sort((a, b) => a.hour - b.hour)
-    .forEach((h) => rows.push(`${h.hour}:00,${h.count}`));
+  // ── Horas pico (3 cols) ───────────────────────────────────────────
+  const peakData = metrics.peakHours.filter((h) => h.count > 0).sort((a, b) => a.hour - b.hour);
+  if (peakData.length > 0) {
+    rows.push(section("── HORAS PICO ──", 3));
+    rows.push(row("Hora", "Conversaciones", "% del total"));
+    peakData.forEach((h) => {
+      const pct = s.total > 0 ? Math.round((h.count / s.total) * 100) : 0;
+      rows.push(row(`${String(h.hour).padStart(2, "0")}:00 – ${String(h.hour + 1).padStart(2, "0")}:00`, h.count, `${pct}%`));
+    });
+  }
 
-  const blob = new Blob(["﻿" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const filename = `metricas_soporte_${slug}_${new Date().toISOString().split("T")[0]}.csv`;
+  const blob = new Blob(["﻿" + rows.join("\r\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `metricas_soporte_${slug}_${date}.csv`;
-  a.click();
+  a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
 
