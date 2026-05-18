@@ -101,9 +101,18 @@ ${((metrics?.peakHours as any[]) ?? []).filter((h: any) => h.count > 0).sort((a:
 
   const systemPrompt = METRICS_AI_SYSTEM + "\n\n" + metricsContext;
 
+  // Determine if the user explicitly requested a report/PDF
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+  const reportTriggers = /genera|crea|exporta|descarga|pdf|reporte|informe|documento/i;
+  const userWantsReport = reportTriggers.test(lastUserMsg);
+
   try {
     const result = await chat(messages, systemPrompt);
-    return NextResponse.json({ text: result.text, provider: result.provider });
+    // Strip @@REPORTE@@ block if the user did NOT ask for a report
+    const text = userWantsReport
+      ? result.text
+      : result.text.replace(/@@REPORTE@@[\s\S]*?@@FINREPORTE@@/g, "").trim();
+    return NextResponse.json({ text, provider: result.provider });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Error de IA" }, { status: 500 });
   }
