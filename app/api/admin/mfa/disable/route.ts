@@ -19,15 +19,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "MFA no configurado" }, { status: 400 });
   }
 
-  const result = await verify({ token: code, secret: admin.mfaSecret });
-  if (!result.valid) {
-    return NextResponse.json({ error: "Código inválido" }, { status: 400 });
+  try {
+    const result = await verify({ token: code, secret: admin.mfaSecret });
+    if (!result.valid) {
+      return NextResponse.json({ error: "Código inválido" }, { status: 400 });
+    }
+
+    await prisma.superAdmin.update({
+      where: { id },
+      data: { mfaEnabled: false, mfaSecret: null },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || "Error interno" }, { status: 500 });
   }
-
-  await prisma.superAdmin.update({
-    where: { id },
-    data: { mfaEnabled: false, mfaSecret: null },
-  });
-
-  return NextResponse.json({ ok: true });
 }

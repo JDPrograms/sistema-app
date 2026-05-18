@@ -15,16 +15,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }
 
-  const result = await verify({ token: code, secret });
-  if (!result.valid) {
-    return NextResponse.json({ error: "Código inválido" }, { status: 400 });
+  try {
+    const result = await verify({ token: code, secret });
+    if (!result.valid) {
+      return NextResponse.json({ error: "Código inválido" }, { status: 400 });
+    }
+
+    const id = (session.user as any).id as string;
+    await prisma.superAdmin.update({
+      where: { id },
+      data: { mfaEnabled: true, mfaSecret: secret },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || "Error interno" }, { status: 500 });
   }
-
-  const id = (session.user as any).id as string;
-  await prisma.superAdmin.update({
-    where: { id },
-    data: { mfaEnabled: true, mfaSecret: secret },
-  });
-
-  return NextResponse.json({ ok: true });
 }

@@ -3,6 +3,10 @@ import { useState, useEffect } from "react";
 
 type MfaStatus = "loading" | "disabled" | "setup" | "verify" | "enabled" | "disabling";
 
+async function safeJson(res: Response, fallback: any) {
+  try { return await res.json(); } catch { return fallback; }
+}
+
 export default function SecurityPage() {
   const [status, setStatus] = useState<MfaStatus>("loading");
   const [qrDataUrl, setQrDataUrl] = useState("");
@@ -14,8 +18,9 @@ export default function SecurityPage() {
 
   useEffect(() => {
     fetch("/api/admin/mfa")
-      .then((r) => r.json())
-      .then((d) => setStatus(d.mfaEnabled ? "enabled" : "disabled"));
+      .then((r) => r.ok ? r.json() : { mfaEnabled: false })
+      .then((d) => setStatus(d.mfaEnabled ? "enabled" : "disabled"))
+      .catch(() => setStatus("disabled"));
   }, []);
 
   async function startSetup() {
@@ -42,8 +47,8 @@ export default function SecurityPage() {
       setCode("");
       setSuccess("MFA activado correctamente. Se pedirá a partir del próximo inicio de sesión.");
     } else {
-      const d = await res.json();
-      setError(d.error || "Error al verificar");
+      const d = await safeJson(res, {});
+      setError(d.error || `Error al verificar (${res.status})`);
     }
   }
 
@@ -62,8 +67,8 @@ export default function SecurityPage() {
       setCode("");
       setSuccess("MFA desactivado.");
     } else {
-      const d = await res.json();
-      setError(d.error || "Error al desactivar");
+      const d = await safeJson(res, {});
+      setError(d.error || `Error al desactivar (${res.status})`);
     }
   }
 
