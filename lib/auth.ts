@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { parseSuperPerms, parseSitePerms } from "@/lib/permissions";
+import { verify as totpVerify } from "otplib";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
@@ -42,6 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        otp: { label: "Código MFA", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -49,11 +51,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email: credentials.email as string },
         });
         if (!admin) return null;
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          admin.password
-        );
+        const valid = await bcrypt.compare(credentials.password as string, admin.password);
         if (!valid) return null;
+        if (admin.mfaEnabled && admin.mfaSecret) {
+          const otp = credentials.otp as string | undefined;
+          if (!otp) return null;
+          const result = await totpVerify({ token: otp, secret: admin.mfaSecret });
+          if (!result.valid) return null;
+        }
         const perms = parseSuperPerms(admin.permissions, admin.isMaster);
         return { id: admin.id, email: admin.email, name: admin.name, role: "superadmin", isMaster: admin.isMaster, permissions: perms };
       },

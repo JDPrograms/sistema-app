@@ -85,6 +85,10 @@ export default function SuperAdminSidebar({ userName, signOutSlot }: Props) {
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-amber-300">
               Superadministradores
             </Link>
+            <Link href="/admin/security" onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-slate-300">
+              🔐 Seguridad
+            </Link>
           </div>
         </nav>
 

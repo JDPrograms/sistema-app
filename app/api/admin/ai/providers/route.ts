@@ -18,9 +18,10 @@ export const POST = auth(async (req) => {
   const hasNewKey = typeof body.apiKey === "string" && body.apiKey.trim().length > 0;
   const provider = await prisma.aiProvider.upsert({
     where: { name: body.name },
-    create: { name: body.name, label: body.label, apiKey: body.apiKey ?? "", isActive: body.isActive ?? false, priority: body.priority ?? 0 },
+    create: { name: body.name, label: body.label, apiKey: body.apiKey ?? "", model: body.model ?? "", isActive: body.isActive ?? false, priority: body.priority ?? 0 },
     update: {
       label: body.label,
+      model: body.model ?? "",
       isActive: body.isActive ?? false,
       priority: body.priority ?? 0,
       ...(hasNewKey && { apiKey: body.apiKey.trim() }),

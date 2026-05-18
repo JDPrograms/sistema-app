@@ -10,37 +10,61 @@ export interface ChatResult {
   provider: string;
 }
 
-async function tryGemini(apiKey: string, messages: Message[], systemPrompt: string): Promise<string> {
+async function tryGemini(apiKey: string, model: string, messages: Message[], systemPrompt: string): Promise<string> {
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+  const m = genAI.getGenerativeModel({
+    model: model || "gemini-1.5-flash",
     systemInstruction: systemPrompt,
     generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
   });
-  const rawHistory = messages.slice(0, -1).map((m) => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content }],
+  const rawHistory = messages.slice(0, -1).map((msg) => ({
+    role: msg.role === "user" ? "user" : "model",
+    parts: [{ text: msg.content }],
   }));
-  // Gemini requires history to start with 'user'
-  const firstUser = rawHistory.findIndex((m) => m.role === "user");
+  const firstUser = rawHistory.findIndex((msg) => msg.role === "user");
   const history = firstUser >= 0 ? rawHistory.slice(firstUser) : [];
-  const chatSession = model.startChat({ history });
+  const chatSession = m.startChat({ history });
   const last = messages[messages.length - 1];
   const result = await chatSession.sendMessage(last.content);
   return result.response.text();
 }
 
-async function tryGroq(apiKey: string, messages: Message[], systemPrompt: string, model: string): Promise<string> {
+async function tryGroq(apiKey: string, model: string, messages: Message[], systemPrompt: string): Promise<string> {
   const Groq = (await import("groq-sdk")).default;
   const groq = new Groq({ apiKey });
   const res = await groq.chat.completions.create({
-    model,
+    model: model || "llama-3.1-8b-instant",
     messages: [{ role: "system", content: systemPrompt }, ...messages],
     max_tokens: 500,
     temperature: 0.7,
   });
   return res.choices[0]?.message?.content ?? "";
+}
+
+async function tryOpenAI(apiKey: string, model: string, messages: Message[], systemPrompt: string): Promise<string> {
+  const OpenAI = (await import("openai")).default;
+  const openai = new OpenAI({ apiKey });
+  const res = await openai.chat.completions.create({
+    model: model || "gpt-4o-mini",
+    messages: [{ role: "system", content: systemPrompt }, ...messages],
+    max_tokens: 500,
+    temperature: 0.7,
+  });
+  return res.choices[0]?.message?.content ?? "";
+}
+
+async function tryAnthropic(apiKey: string, model: string, messages: Message[], systemPrompt: string): Promise<string> {
+  const Anthropic = (await import("@anthropic-ai/sdk")).default;
+  const client = new Anthropic({ apiKey });
+  const res = await client.messages.create({
+    model: model || "claude-haiku-4-5-20251001",
+    max_tokens: 500,
+    system: systemPrompt,
+    messages,
+  });
+  const block = res.content[0];
+  return block.type === "text" ? block.text : "";
 }
 
 function isRateLimit(e: unknown): boolean {
@@ -68,10 +92,13 @@ export async function chat(
   const attempts: Attempt[] = [];
   for (const p of ordered) {
     if (p.name === "gemini") {
-      attempts.push({ label: "Gemini", run: () => tryGemini(p.apiKey, messages, systemPrompt) });
+      attempts.push({ label: `Gemini (${p.model || "gemini-1.5-flash"})`, run: () => tryGemini(p.apiKey, p.model, messages, systemPrompt) });
     } else if (p.name === "groq") {
-      attempts.push({ label: "Groq (Llama)", run: () => tryGroq(p.apiKey, messages, systemPrompt, "llama-3.1-8b-instant") });
-      attempts.push({ label: "Groq (Mixtral)", run: () => tryGroq(p.apiKey, messages, systemPrompt, "mixtral-8x7b-32768") });
+      attempts.push({ label: `Groq (${p.model || "llama-3.1-8b-instant"})`, run: () => tryGroq(p.apiKey, p.model, messages, systemPrompt) });
+    } else if (p.name === "openai") {
+      attempts.push({ label: `OpenAI (${p.model || "gpt-4o-mini"})`, run: () => tryOpenAI(p.apiKey, p.model, messages, systemPrompt) });
+    } else if (p.name === "anthropic") {
+      attempts.push({ label: `Anthropic (${p.model || "claude-haiku-4-5"})`, run: () => tryAnthropic(p.apiKey, p.model, messages, systemPrompt) });
     }
   }
 

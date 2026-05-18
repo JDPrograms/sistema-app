@@ -15,15 +15,18 @@ model SuperAdmin {
   name        String
   isMaster    Boolean  @default(false)
   permissions String   @default("{}")
+  mfaEnabled  Boolean  @default(false)
+  mfaSecret   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model AiProvider {
   id        String   @id @default(cuid())
-  name      String   @unique // "gemini" | "groq"
+  name      String   @unique // "gemini" | "groq" | "openai" | "anthropic"
   label     String
   apiKey    String   @default("")
+  model     String   @default("")
   isActive  Boolean  @default(false)
   priority  Int      @default(0)
   createdAt DateTime @default(now())

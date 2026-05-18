@@ -1,18 +1,68 @@
 "use client";
 import { useEffect, useState } from "react";
 
-interface Provider { id: string; name: string; label: string; hasKey: boolean; isActive: boolean; priority: number }
+interface Provider { id: string; name: string; label: string; model: string; hasKey: boolean; isActive: boolean; priority: number }
 interface Agent { id: string; name: string; description?: string; systemPrompt: string; preferredProvider?: string; isGlobal: boolean; isActive: boolean; siteId?: string; site?: { name: string; slug: string } }
 
-const PROVIDER_INFO: Record<string, { icon: string; desc: string; link: string }> = {
-  gemini: { icon: "✨", desc: "Google Gemini 1.5 Flash — 15 req/min, 1M tokens/dia gratis", link: "https://aistudio.google.com/apikey" },
-  groq: { icon: "⚡", desc: "Groq — Llama 3 y Mixtral, 14,400 req/dia gratis", link: "https://console.groq.com/keys" },
-};
+type ProviderName = "gemini" | "groq" | "openai" | "anthropic";
 
-const DEFAULT_PROVIDERS = [
-  { name: "gemini", label: "Google Gemini", priority: 0 },
-  { name: "groq", label: "Groq", priority: 1 },
+interface ProviderDef {
+  name: ProviderName;
+  label: string;
+  icon: string;
+  desc: string;
+  link: string;
+  priority: number;
+  models: { value: string; label: string }[];
+  defaultModel: string;
+}
+
+const PROVIDERS: ProviderDef[] = [
+  {
+    name: "gemini", label: "Google Gemini", icon: "✨", priority: 0, defaultModel: "gemini-1.5-flash",
+    desc: "Google Gemini — generoso nivel gratuito, rápido y multimodal",
+    link: "https://aistudio.google.com/apikey",
+    models: [
+      { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (rápido, gratuito)" },
+      { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro (más capaz)" },
+      { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+    ],
+  },
+  {
+    name: "groq", label: "Groq", icon: "⚡", priority: 1, defaultModel: "llama-3.1-8b-instant",
+    desc: "Groq — inferencia ultrarrápida, Llama y Mixtral gratuitos",
+    link: "https://console.groq.com/keys",
+    models: [
+      { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant (gratuito)" },
+      { value: "llama-3.1-70b-versatile", label: "Llama 3.1 70B Versatile" },
+      { value: "mixtral-8x7b-32768", label: "Mixtral 8x7B" },
+      { value: "llama3-groq-70b-8192-tool-use-preview", label: "Llama 3 70B Tool Use" },
+    ],
+  },
+  {
+    name: "openai", label: "OpenAI", icon: "🤖", priority: 2, defaultModel: "gpt-4o-mini",
+    desc: "OpenAI — GPT-4o y GPT-4o Mini, líder del sector",
+    link: "https://platform.openai.com/api-keys",
+    models: [
+      { value: "gpt-4o-mini", label: "GPT-4o Mini (económico)" },
+      { value: "gpt-4o", label: "GPT-4o (máxima capacidad)" },
+      { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo" },
+      { value: "o4-mini", label: "o4-mini (razonamiento)" },
+    ],
+  },
+  {
+    name: "anthropic", label: "Anthropic Claude", icon: "🧠", priority: 3, defaultModel: "claude-haiku-4-5-20251001",
+    desc: "Anthropic — Claude, excelente en redacción y análisis",
+    link: "https://console.anthropic.com/settings/keys",
+    models: [
+      { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 (rápido)" },
+      { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 (equilibrado)" },
+      { value: "claude-opus-4-7", label: "Claude Opus 4.7 (máxima capacidad)" },
+    ],
+  },
 ];
+
+const ALL_PROVIDER_OPTIONS = PROVIDERS.map((p) => ({ value: p.name, label: p.label }));
 
 export default function AdminAiPage() {
   const [tab, setTab] = useState<"providers" | "agents">("providers");
@@ -20,8 +70,9 @@ export default function AdminAiPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [editKey, setEditKey] = useState<Record<string, string>>({});
+  const [editModel, setEditModel] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
-  const [msg, setMsg] = useState("");
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
   const [agentForm, setAgentForm] = useState({ name: "", description: "", systemPrompt: "", preferredProvider: "", isGlobal: true });
   const [savingAgent, setSavingAgent] = useState(false);
@@ -29,41 +80,44 @@ export default function AdminAiPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [pRes, aRes] = await Promise.all([
-      fetch("/api/admin/ai/providers"),
-      fetch("/api/admin/ai/agents"),
-    ]);
-    if (pRes.ok) setProviders(await pRes.json());
+    const [pRes, aRes] = await Promise.all([fetch("/api/admin/ai/providers"), fetch("/api/admin/ai/agents")]);
+    if (pRes.ok) {
+      const data: Provider[] = await pRes.json();
+      setProviders(data);
+      const modelMap: Record<string, string> = {};
+      data.forEach((p) => { modelMap[p.name] = p.model; });
+      setEditModel(modelMap);
+    }
     if (aRes.ok) setAgents(await aRes.json());
     setLoading(false);
   }
 
   useEffect(() => { loadAll(); }, []);
 
-  async function saveProvider(p: { name: string; label: string; priority: number }, key: string, isActive: boolean) {
-    setSaving(p.name);
-    setMsg("");
+  async function saveProvider(def: ProviderDef, key: string, model: string, isActive: boolean) {
+    setSaving(def.name);
+    setSavedMsg(null);
     const res = await fetch("/api/admin/ai/providers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: p.name, label: p.label, apiKey: key, isActive, priority: p.priority }),
+      body: JSON.stringify({ name: def.name, label: def.label, apiKey: key, model, isActive, priority: def.priority }),
     });
     setSaving(null);
     if (res.ok) {
-      setMsg("Guardado");
+      setSavedMsg(def.name);
       loadAll();
-      setEditKey((prev) => ({ ...prev, [p.name]: "" }));
-      setTimeout(() => setMsg(""), 2000);
+      setEditKey((prev) => ({ ...prev, [def.name]: "" }));
+      setTimeout(() => setSavedMsg(null), 2500);
     }
   }
 
   async function toggleActive(provider: Provider) {
-    const res = await fetch(`/api/admin/ai/providers/${provider.id}`, {
+    await fetch(`/api/admin/ai/providers/${provider.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !provider.isActive }),
     });
-    if (res.ok) loadAll();
+    loadAll();
   }
 
   async function createAgent(e: React.FormEvent) {
@@ -92,7 +146,7 @@ export default function AdminAiPage() {
   }
 
   async function deleteAgent(id: string) {
-    if (!confirm("Eliminar este agente?")) return;
+    if (!confirm("¿Eliminar este agente?")) return;
     await fetch(`/api/admin/ai/agents/${id}`, { method: "DELETE" });
     loadAll();
   }
@@ -121,64 +175,90 @@ export default function AdminAiPage() {
       ) : tab === "providers" ? (
         <div className="space-y-4">
           <p className="text-sm text-gray-500 bg-blue-50 border border-blue-200 rounded-xl p-4">
-            Configura las API keys de los proveedores. El sistema usara el de mayor prioridad (menor numero) y cambiara automaticamente al siguiente si alcanza el limite gratuito.
+            Configura las API keys de los proveedores. El sistema usará el de mayor prioridad y cambiará automáticamente al siguiente si alcanza el límite. Puedes activar varios a la vez como respaldo.
           </p>
-          {DEFAULT_PROVIDERS.map((dp) => {
-            const existing = providers.find((p) => p.name === dp.name);
-            const info = PROVIDER_INFO[dp.name];
+          {PROVIDERS.map((def) => {
+            const existing = providers.find((p) => p.name === def.name);
+            const currentModel = editModel[def.name] ?? existing?.model ?? def.defaultModel;
             return (
-              <div key={dp.name} className="bg-white rounded-xl border border-gray-200 p-6">
+              <div key={def.name} className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{info.icon}</span>
+                    <span className="text-2xl">{def.icon}</span>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">{dp.label}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${existing?.isActive ? "bg-green-100 text-green-700" : existing?.hasKey ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-gray-900">{def.label}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          existing?.isActive ? "bg-green-100 text-green-700" :
+                          existing?.hasKey ? "bg-yellow-100 text-yellow-700" :
+                          "bg-gray-100 text-gray-500"
+                        }`}>
                           {existing?.isActive ? "Activo" : existing?.hasKey ? "Inactivo" : "Sin configurar"}
                         </span>
+                        {existing?.isActive && existing.model && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{existing.model}</span>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-400 mt-0.5">{info.desc}</p>
+                      <p className="text-sm text-gray-400 mt-0.5">{def.desc}</p>
                     </div>
                   </div>
                   {existing && (
                     <button onClick={() => toggleActive(existing)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${existing.isActive ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100" : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"}`}>
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex-shrink-0 ${
+                        existing.isActive
+                          ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                          : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                      }`}>
                       {existing.isActive ? "Desactivar" : "Activar"}
                     </button>
                   )}
                 </div>
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div>
                     <label className="block text-xs text-gray-500 mb-1">
-                      API Key {existing?.hasKey ? "(ya guardada — deja en blanco para no cambiar)" : ""}
+                      API Key {existing?.hasKey ? "(guardada — deja en blanco para no cambiar)" : ""}
                       {" · "}
-                      <a href={info.link} target="_blank" className="text-blue-500 hover:underline">Obtener gratis ↗</a>
+                      <a href={def.link} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">Obtener gratis ↗</a>
                     </label>
                     <input
                       type="password"
-                      value={editKey[dp.name] ?? ""}
-                      onChange={(e) => setEditKey((prev) => ({ ...prev, [dp.name]: e.target.value }))}
+                      value={editKey[def.name] ?? ""}
+                      onChange={(e) => setEditKey((prev) => ({ ...prev, [def.name]: e.target.value }))}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder={existing?.hasKey ? "••••••••••••••••" : "Pega tu API key aqui"}
+                      placeholder={existing?.hasKey ? "••••••••••••••••" : "Pega tu API key aquí"}
                     />
                   </div>
-                  <button
-                    onClick={() => saveProvider(dp, editKey[dp.name] ?? "", existing?.isActive ?? false)}
-                    disabled={saving === dp.name}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-                  >
-                    {saving === dp.name ? "Guardando..." : "Guardar"}
-                  </button>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Modelo</label>
+                    <select
+                      value={currentModel}
+                      onChange={(e) => setEditModel((prev) => ({ ...prev, [def.name]: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {def.models.map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                {msg && saving === null && <p className="text-xs text-green-600 mt-2">{msg}</p>}
+
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => saveProvider(def, editKey[def.name] ?? "", currentModel, existing?.isActive ?? false)}
+                    disabled={saving === def.name}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    {saving === def.name ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                  {savedMsg === def.name && <span className="text-xs text-green-600 font-medium">✓ Guardado</span>}
+                </div>
               </div>
             );
           })}
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Crear agente */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="font-semibold text-gray-900 mb-4">Crear nuevo agente</h2>
             <form onSubmit={createAgent} className="space-y-4">
@@ -187,32 +267,32 @@ export default function AdminAiPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
                   <input value={agentForm.name} onChange={(e) => setAgentForm((p) => ({ ...p, name: e.target.value }))}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Asistente Barberia" required />
+                    placeholder="Asistente Barbería" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor preferido</label>
                   <select value={agentForm.preferredProvider} onChange={(e) => setAgentForm((p) => ({ ...p, preferredProvider: e.target.value }))}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Auto (mejor disponible)</option>
-                    <option value="gemini">Google Gemini</option>
-                    <option value="groq">Groq</option>
+                    {ALL_PROVIDER_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripcion</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                 <input value={agentForm.description} onChange={(e) => setAgentForm((p) => ({ ...p, description: e.target.value }))}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Agente de atencion al cliente para barberías" />
+                  placeholder="Agente de atención al cliente para barberías" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Instrucciones del agente (System Prompt) *</label>
                 <textarea value={agentForm.systemPrompt} onChange={(e) => setAgentForm((p) => ({ ...p, systemPrompt: e.target.value }))}
                   rows={5}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Eres un asistente amable de una barberia. Tu objetivo es ayudar a los clientes a reservar citas, responder preguntas sobre los servicios y horarios. Responde siempre en español de manera profesional y concisa."
+                  placeholder="Eres un asistente amable de una barbería. Tu objetivo es ayudar a los clientes a reservar citas, responder preguntas sobre los servicios y horarios. Responde siempre en español de manera profesional y concisa."
                   required />
-                <p className="text-xs text-gray-400 mt-1">Define la personalidad, tono y objetivo del agente. El sistema agregara automaticamente la informacion del sitio.</p>
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="isGlobal" checked={agentForm.isGlobal} onChange={(e) => setAgentForm((p) => ({ ...p, isGlobal: e.target.checked }))} className="w-4 h-4" />
@@ -227,7 +307,6 @@ export default function AdminAiPage() {
             </form>
           </div>
 
-          {/* Agentes globales */}
           <div>
             <h2 className="font-semibold text-gray-900 mb-3">Agentes globales ({globalAgents.length})</h2>
             {globalAgents.length === 0 ? (
@@ -241,7 +320,6 @@ export default function AdminAiPage() {
             )}
           </div>
 
-          {/* Agentes de sitios */}
           {siteAgents.length > 0 && (
             <div>
               <h2 className="font-semibold text-gray-900 mb-3">Agentes de sitios ({siteAgents.length})</h2>
@@ -275,14 +353,15 @@ function AgentCard({ agent, onDelete, onUpdate, editing, setEditing }: {
           <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nombre" />
           <input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Descripcion" />
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Descripción" />
           <textarea value={form.systemPrompt} onChange={(e) => setForm((p) => ({ ...p, systemPrompt: e.target.value }))}
             rows={4} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="System prompt" />
           <select value={form.preferredProvider} onChange={(e) => setForm((p) => ({ ...p, preferredProvider: e.target.value }))}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Auto</option>
-            <option value="gemini">Google Gemini</option>
-            <option value="groq">Groq</option>
+            <option value="">Auto (mejor disponible)</option>
+            {ALL_PROVIDER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
           </select>
           <div className="flex gap-2 justify-end">
             <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Cancelar</button>
