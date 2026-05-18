@@ -95,6 +95,7 @@ export default async function SiteAdminLayout({
     ...(mods.ads !== false ? [{ href: `/site/${slug}/admin/ads`, label: "Publicidades" }] : []),
     ...(mods.users !== false ? [{ href: `/site/${slug}/admin/users`, label: "Usuarios" }] : []),
     ...(mods.ai !== false ? [{ href: `/site/${slug}/admin/ai`, label: "IA" }] : []),
+    { href: `/site/${slug}/admin/admins`, label: "Administradores" },
   ];
 
   const signOutSlot = isSuperAdmin ? (

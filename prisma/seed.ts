@@ -8,11 +8,17 @@ async function main() {
   if (!existing) {
     const password = await bcrypt.hash("admin123", 10);
     await prisma.superAdmin.create({
-      data: { email: "admin@sistema.com", password, name: "Super Admin" },
+      data: { email: "admin@sistema.com", password, name: "Super Admin", isMaster: true },
     });
     console.log("Super admin creado: admin@sistema.com / admin123");
   } else {
-    console.log("Super admin ya existe.");
+    // ensure the initial admin is marked as master
+    if (!existing.isMaster) {
+      await prisma.superAdmin.update({ where: { id: existing.id }, data: { isMaster: true } });
+      console.log("Super admin marcado como master.");
+    } else {
+      console.log("Super admin ya existe.");
+    }
   }
 
   const geminiKey = process.env.GEMINI_API_KEY ?? "";

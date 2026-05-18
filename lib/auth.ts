@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { parseSuperPerms, parseSitePerms } from "@/lib/permissions";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
@@ -12,18 +13,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role;
-        token.siteId = (user as any).siteId;
-        token.siteSlug = (user as any).siteSlug;
+        token.role        = (user as any).role;
+        token.siteId      = (user as any).siteId;
+        token.siteSlug    = (user as any).siteSlug;
+        token.isMaster    = (user as any).isMaster;
+        token.isOwner     = (user as any).isOwner;
+        token.permissions = (user as any).permissions;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).id = token.sub;
-        (session.user as any).siteId = token.siteId;
-        (session.user as any).siteSlug = token.siteSlug;
+        (session.user as any).role        = token.role;
+        (session.user as any).id          = token.sub;
+        (session.user as any).siteId      = token.siteId;
+        (session.user as any).siteSlug    = token.siteSlug;
+        (session.user as any).isMaster    = token.isMaster;
+        (session.user as any).isOwner     = token.isOwner;
+        (session.user as any).permissions = token.permissions;
       }
       return session;
     },
@@ -47,7 +54,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           admin.password
         );
         if (!valid) return null;
-        return { id: admin.id, email: admin.email, name: admin.name, role: "superadmin" };
+        const perms = parseSuperPerms(admin.permissions, admin.isMaster);
+        return { id: admin.id, email: admin.email, name: admin.name, role: "superadmin", isMaster: admin.isMaster, permissions: perms };
       },
     }),
     Credentials({
@@ -70,6 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!admin) return null;
         const valid = await bcrypt.compare(credentials.password as string, admin.password);
         if (!valid) return null;
+        const perms = parseSitePerms(admin.permissions, admin.isOwner);
         return {
           id: admin.id,
           email: admin.email,
@@ -77,6 +86,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: "siteadmin",
           siteId: site.id,
           siteSlug: site.slug,
+          isOwner: admin.isOwner,
+          permissions: perms,
         };
       },
     }),

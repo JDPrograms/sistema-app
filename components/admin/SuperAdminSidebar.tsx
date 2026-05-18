@@ -81,6 +81,10 @@ export default function SuperAdminSidebar({ userName, signOutSlot }: Props) {
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-purple-300">
               Inteligencia Artificial
             </Link>
+            <Link href="/admin/admins" onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-amber-300">
+              Superadministradores
+            </Link>
           </div>
         </nav>
 
