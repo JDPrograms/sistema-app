@@ -18,6 +18,7 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
   const secondary = site.secondaryColor || "#d4a574";
   const activeStaff = site.staff.filter((s) => s.isActive);
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans flex flex-col" style={{ backgroundColor: "#faf9f7" }}>

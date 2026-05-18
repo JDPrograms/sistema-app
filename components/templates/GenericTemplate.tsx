@@ -11,6 +11,7 @@ interface Site {
 export default function GenericTemplate({ site, appointmentsEnabled = true, children, layoutConfig }: { site: Site; appointmentsEnabled?: boolean; children?: React.ReactNode; layoutConfig?: string | null }) {
   const primary = site.primaryColor || "#6366f1";
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans flex flex-col">
@@ -33,28 +34,36 @@ export default function GenericTemplate({ site, appointmentsEnabled = true, chil
         </div>
       </header>
 
-      <section className="py-24 text-center px-6" style={{ background: `linear-gradient(135deg, ${primary}10, ${primary}05)`, ...getSecStyle(layout, "hero", 1) }}>
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-5xl font-extrabold text-gray-900 mb-4">{site.name}</h1>
-          <p className="text-xl text-gray-500">{site.description || "Bienvenido a nuestro sitio web."}</p>
-          {(site.phone || site.email) && (
-            <div className="mt-8 flex gap-3 justify-center flex-wrap">
-              {site.phone && (
-                <a href={`tel:${site.phone}`}
-                  className="px-6 py-3 rounded-xl text-white font-semibold transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: primary }}>
-                  {site.phone}
-                </a>
-              )}
-              {site.email && (
-                <a href={`mailto:${site.email}`}
-                  className="px-6 py-3 rounded-xl border-2 font-semibold transition-colors hover:bg-gray-50"
-                  style={{ borderColor: primary, color: primary }}>
-                  {site.email}
-                </a>
-              )}
-            </div>
-          )}
+      <section className="relative py-24 text-center px-6 overflow-hidden" style={getSecStyle(layout, "hero", 1)}>
+        {heroData.bgImage
+          ? <><img src={heroData.bgImage} alt="hero" className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(heroData.overlay ?? 40) / 100})` }} /></>
+          : <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primary}10, ${primary}05)` }} />}
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <h1 className={`text-5xl font-extrabold mb-4 ${heroData.bgImage ? "text-white" : "text-gray-900"}`}>{heroData.title || site.name}</h1>
+          <p className={`text-xl ${heroData.bgImage ? "text-white/80" : "text-gray-500"}`}>{heroData.subtitle || site.description || "Bienvenido a nuestro sitio web."}</p>
+          <div className="mt-8 flex gap-3 justify-center flex-wrap">
+            {(heroData.ctaText || heroData.ctaUrl) && (
+              <a href={heroData.ctaUrl || "#servicios"}
+                className="px-6 py-3 rounded-xl text-white font-semibold transition-opacity hover:opacity-90"
+                style={{ backgroundColor: primary }}>
+                {heroData.ctaText}
+              </a>
+            )}
+            {!heroData.ctaText && site.phone && (
+              <a href={`tel:${site.phone}`}
+                className="px-6 py-3 rounded-xl text-white font-semibold transition-opacity hover:opacity-90"
+                style={{ backgroundColor: primary }}>
+                {site.phone}
+              </a>
+            )}
+            {!heroData.ctaText && site.email && (
+              <a href={`mailto:${site.email}`}
+                className="px-6 py-3 rounded-xl border-2 font-semibold transition-colors hover:bg-gray-50"
+                style={{ borderColor: primary, color: primary }}>
+                {site.email}
+              </a>
+            )}
+          </div>
         </div>
       </section>
 

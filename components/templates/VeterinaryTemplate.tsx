@@ -18,6 +18,7 @@ export default function VeterinaryTemplate({ site, appointmentsEnabled = true, c
   const secondary = site.secondaryColor || "#f0fdfa";
   const activeStaff = site.staff.filter((s) => s.isActive);
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans bg-white flex flex-col">

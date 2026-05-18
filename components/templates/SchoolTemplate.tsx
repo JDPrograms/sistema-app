@@ -36,6 +36,7 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
   const secondary = site.secondaryColor || "#818cf8";
   const activeStaff = site.staff.filter((s) => s.isActive);
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans bg-white text-gray-900 flex flex-col">

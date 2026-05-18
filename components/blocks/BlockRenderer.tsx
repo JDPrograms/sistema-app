@@ -4,10 +4,16 @@ import TestimonialsBlock from "./TestimonialsBlock";
 import FaqBlock from "./FaqBlock";
 import CtaBlock from "./CtaBlock";
 import TextBlock from "./TextBlock";
+import PricingBlock from "./PricingBlock";
+import TeamBlock from "./TeamBlock";
+import VideoBlock from "./VideoBlock";
+import ScheduleBlock from "./ScheduleBlock";
+import MapBlock from "./MapBlock";
+import FeaturesBlock from "./FeaturesBlock";
 
 export interface PageBlock {
   id: string;
-  type: "gallery" | "stats" | "testimonials" | "faq" | "cta" | "text";
+  type: "gallery" | "stats" | "testimonials" | "faq" | "cta" | "text" | "pricing" | "team" | "video" | "schedule" | "map" | "features";
   config: any;
   order: number;
 }
@@ -43,6 +49,18 @@ export default function BlockRenderer({
             return <CtaBlock key={block.id} config={block.config} primaryColor={primaryColor} secondaryColor={secondaryColor} />;
           case "text":
             return <TextBlock key={block.id} config={block.config} primaryColor={primaryColor} />;
+          case "pricing":
+            return <PricingBlock key={block.id} config={block.config} primaryColor={primaryColor} />;
+          case "team":
+            return <TeamBlock key={block.id} config={block.config} primaryColor={primaryColor} />;
+          case "video":
+            return <VideoBlock key={block.id} config={block.config} primaryColor={primaryColor} />;
+          case "schedule":
+            return <ScheduleBlock key={block.id} config={block.config} primaryColor={primaryColor} />;
+          case "map":
+            return <MapBlock key={block.id} config={block.config} primaryColor={primaryColor} />;
+          case "features":
+            return <FeaturesBlock key={block.id} config={block.config} primaryColor={primaryColor} />;
           default:
             return null;
         }

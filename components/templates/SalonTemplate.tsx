@@ -18,6 +18,7 @@ export default function SalonTemplate({ site, appointmentsEnabled = true, childr
   const secondary = site.secondaryColor || "#f9a8d4";
   const activeStaff = site.staff.filter((s) => s.isActive);
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans flex flex-col" style={{ backgroundColor: "#fdf2f8" }}>
@@ -47,33 +48,29 @@ export default function SalonTemplate({ site, appointmentsEnabled = true, childr
       </header>
 
       {/* HERO */}
-      <section
-        className="py-28 text-center relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, #fce7f3 0%, #fdf2f8 50%, #fce7f3 100%)`, ...getSecStyle(layout, "hero", 1) }}
-      >
-        {/* Decorative circles */}
-        <div className="absolute top-8 left-8 w-32 h-32 rounded-full opacity-20" style={{ backgroundColor: secondary }} />
-        <div className="absolute bottom-8 right-8 w-48 h-48 rounded-full opacity-10" style={{ backgroundColor: primary }} />
+      <section className="py-28 text-center relative overflow-hidden" style={getSecStyle(layout, "hero", 1)}>
+        {heroData.bgImage
+          ? <><img src={heroData.bgImage} alt="hero" className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(heroData.overlay ?? 40) / 100})` }} /></>
+          : <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, #fce7f3 0%, #fdf2f8 50%, #fce7f3 100%)` }} />}
+        {/* Decorative circles (only without bgImage) */}
+        {!heroData.bgImage && <><div className="absolute top-8 left-8 w-32 h-32 rounded-full opacity-20" style={{ backgroundColor: secondary }} /><div className="absolute bottom-8 right-8 w-48 h-48 rounded-full opacity-10" style={{ backgroundColor: primary }} /></>}
 
-        <div className="relative max-w-3xl mx-auto px-6">
+        <div className="relative z-10 max-w-3xl mx-auto px-6">
           <div className="text-4xl mb-4">✨</div>
-          <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-4" style={{ color: "#2d1b2e" }}>
-            {site.name}
+          <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-4" style={{ color: heroData.bgImage ? "#fff" : "#2d1b2e" }}>
+            {heroData.title || site.name}
           </h1>
-          <p className="text-lg text-gray-500 mb-8 max-w-xl mx-auto leading-relaxed">
-            {site.description || "Belleza, cuidado y bienestar en un espacio diseñado para ti."}
+          <p className={`text-lg mb-8 max-w-xl mx-auto leading-relaxed ${heroData.bgImage ? "text-white/80" : "text-gray-500"}`}>
+            {heroData.subtitle || site.description || "Belleza, cuidado y bienestar en un espacio diseñado para ti."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {site.phone && (
-              <a
-                href={`tel:${site.phone}`}
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full text-white font-semibold text-sm transition-opacity hover:opacity-85"
-                style={{ backgroundColor: primary }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                Llamar para reservar
-              </a>
-            )}
+            <a
+              href={heroData.ctaUrl || (site.phone ? `tel:${site.phone}` : "#servicios")}
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full text-white font-semibold text-sm transition-opacity hover:opacity-85"
+              style={{ backgroundColor: primary }}
+            >
+              {heroData.ctaText || (site.phone ? "Llamar para reservar" : "Ver servicios")}
+            </a>
             <a
               href="#servicios"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-semibold text-sm border-2 transition-colors hover:bg-pink-50"

@@ -23,6 +23,7 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
   const primary = site.primaryColor || "#1e293b";
   const secondary = site.secondaryColor || "#d4a017";
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans flex flex-col" style={{ backgroundColor: "#f8fafc" }}>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { TEMPLATE_SECTIONS, SectionDef } from "@/lib/template-sections";
-import { SectionLayout } from "@/lib/layout-config";
+import { SectionLayout, HeroData } from "@/lib/layout-config";
 
 interface SectionState extends SectionDef {
   order: number;
@@ -17,13 +17,18 @@ const SECTION_ICONS: Record<string, string> = {
   staff: "🧑‍⚕️", menu: "🍽️", products: "📦", courses: "📚", instructors: "🎓",
   benefits: "🏆", specialties: "🩺", office: "🏥", areas: "⚖️", properties: "🏠",
   advisors: "🤝", rooms: "🛏️", amenities: "✨", extra: "ℹ️",
+  portfolio: "🖼", specialty: "⭐", howItWorks: "🔄", trust: "🛡️", features: "✅",
 };
+
+const EMPTY_HERO: HeroData = { title: "", subtitle: "", bgImage: "", overlay: 50, ctaText: "", ctaUrl: "", align: "center" };
 
 export default function SectionsAdminPage() {
   const params = useParams();
   const slug = params.slug as string;
 
+  const [activeTab, setActiveTab] = useState<"sections" | "hero">("sections");
   const [sections, setSections] = useState<SectionState[]>([]);
+  const [heroData, setHeroData] = useState<HeroData>(EMPTY_HERO);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,9 +47,11 @@ export default function SectionsAdminPage() {
       const tmpl = data.template || "generic";
       const defs: SectionDef[] = TEMPLATE_SECTIONS[tmpl] ?? TEMPLATE_SECTIONS["generic"];
       let savedSections: SectionLayout[] = [];
+      let savedHero: HeroData = EMPTY_HERO;
       try {
         const lc = JSON.parse(data.layoutConfig || "null");
         savedSections = lc?.sections ?? [];
+        if (lc?.heroData) savedHero = { ...EMPTY_HERO, ...lc.heroData };
       } catch {}
       const merged: SectionState[] = defs.map((def) => {
         const saved = savedSections.find((s) => s.key === def.key);
@@ -57,13 +64,14 @@ export default function SectionsAdminPage() {
       });
       merged.sort((a, b) => a.order - b.order);
       setSections(merged);
+      setHeroData(savedHero);
       setLoading(false);
     }
     load();
   }, [slug]);
 
   // Push layout to DB and refresh preview (used for both manual save and auto-preview)
-  async function pushLayout(secs: SectionState[], isManual: boolean) {
+  async function pushLayout(secs: SectionState[], hero: HeroData, isManual: boolean) {
     const layoutSections: SectionLayout[] = secs.map((s, i) => ({
       key: s.key,
       order: i,
@@ -73,7 +81,7 @@ export default function SectionsAdminPage() {
     await fetch(`/api/site/${slug}/customize`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ layoutConfig: JSON.stringify({ sections: layoutSections }) }),
+      body: JSON.stringify({ layoutConfig: JSON.stringify({ sections: layoutSections, heroData: hero }) }),
     });
     refreshPreview();
     if (isManual) {
@@ -91,16 +99,24 @@ export default function SectionsAdminPage() {
 
   async function save() {
     setSaving(true);
-    await pushLayout(sections, true);
+    await pushLayout(sections, heroData, true);
     setSaving(false);
   }
 
-  // Auto-preview: debounce 1.2s after any section change
-  function schedulePreview(newSections: SectionState[]) {
+  // Auto-preview: debounce 1.2s after any section/hero change
+  function schedulePreview(newSections: SectionState[], newHero?: HeroData) {
     if (previewDebounce.current) clearTimeout(previewDebounce.current);
     previewDebounce.current = setTimeout(() => {
-      pushLayout(newSections, false);
+      pushLayout(newSections, newHero ?? heroData, false);
     }, 1200);
+  }
+
+  function updateHero(field: keyof HeroData, value: string | number) {
+    setHeroData((prev) => {
+      const next = { ...prev, [field]: value };
+      schedulePreview(sections, next);
+      return next;
+    });
   }
 
   // ---- Drag-to-reorder ----
@@ -123,7 +139,7 @@ export default function SectionsAdminPage() {
         const next = [...prev];
         const [moved] = next.splice(dragItem.current!, 1);
         next.splice(dragOverIndex, 0, moved);
-        schedulePreview(next);
+        schedulePreview(next, heroData);
         return next;
       });
     }
@@ -156,9 +172,8 @@ export default function SectionsAdminPage() {
       resizeRef.current = null;
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
-      // Schedule preview after resize ends
       setSections((current) => {
-        schedulePreview(current);
+        schedulePreview(current, heroData);
         return current;
       });
     }
@@ -171,7 +186,7 @@ export default function SectionsAdminPage() {
     setSections((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], hidden: !next[index].hidden };
-      schedulePreview(next);
+      schedulePreview(next, heroData);
       return next;
     });
   }
@@ -180,7 +195,7 @@ export default function SectionsAdminPage() {
     setSections((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], minHeight: null };
-      schedulePreview(next);
+      schedulePreview(next, heroData);
       return next;
     });
   }
@@ -200,8 +215,8 @@ export default function SectionsAdminPage() {
         {/* Header */}
         <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Diseño de Secciones</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Reordena, oculta y ajusta el alto de cada sección</p>
+            <h1 className="text-lg font-bold text-gray-900">Diseño del Sitio</h1>
+            <p className="text-xs text-gray-400 mt-0.5">Personaliza el aspecto de tu página</p>
           </div>
           <button
             onClick={save}
@@ -213,8 +228,125 @@ export default function SectionsAdminPage() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100 flex-shrink-0">
+          <button
+            onClick={() => setActiveTab("sections")}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === "sections" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            🗂 Secciones
+          </button>
+          <button
+            onClick={() => setActiveTab("hero")}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === "hero" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            🖼 Hero / Banner
+          </button>
+        </div>
+
+        {/* Hero editing panel */}
+        {activeTab === "hero" && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <p className="text-xs text-gray-400">Personaliza el banner principal de tu sitio. Los campos vacíos usan los valores por defecto del sitio.</p>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Título principal</label>
+              <input
+                type="text"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                placeholder="Ej: Bienvenido a Mi Negocio"
+                value={heroData.title ?? ""}
+                onChange={(e) => updateHero("title", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Subtítulo / Descripción</label>
+              <textarea
+                rows={2}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+                placeholder="Ej: Los mejores servicios al mejor precio"
+                value={heroData.subtitle ?? ""}
+                onChange={(e) => updateHero("subtitle", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Imagen de fondo (URL)</label>
+              <input
+                type="url"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                placeholder="https://..."
+                value={heroData.bgImage ?? ""}
+                onChange={(e) => updateHero("bgImage", e.target.value)}
+              />
+              {heroData.bgImage && (
+                <div className="mt-2 rounded-lg overflow-hidden h-24 bg-gray-100 border border-gray-200">
+                  <img src={heroData.bgImage} alt="preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Opacidad del overlay: {heroData.overlay ?? 50}%</label>
+              <input
+                type="range" min={0} max={90} step={5}
+                className="w-full"
+                value={heroData.overlay ?? 50}
+                onChange={(e) => updateHero("overlay", Number(e.target.value))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Texto del botón CTA</label>
+              <input
+                type="text"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                placeholder="Ej: Ver Servicios"
+                value={heroData.ctaText ?? ""}
+                onChange={(e) => updateHero("ctaText", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">URL del botón CTA</label>
+              <input
+                type="text"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                placeholder="Ej: #servicios"
+                value={heroData.ctaUrl ?? ""}
+                onChange={(e) => updateHero("ctaUrl", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Alineación del texto</label>
+              <div className="flex gap-2">
+                {(["left", "center", "right"] as const).map((align) => (
+                  <button
+                    key={align}
+                    onClick={() => updateHero("align", align)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${heroData.align === align ? "border-blue-400 text-blue-600 bg-blue-50" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                  >
+                    {align === "left" ? "⬅ Izq" : align === "center" ? "↔ Centro" : "Dcha ➡"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={save}
+              disabled={saving}
+              className="w-full py-3 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-60"
+              style={{ backgroundColor: "#3b82f6" }}
+            >
+              {saving ? "Guardando..." : saved ? "✓ Guardado" : "Guardar cambios del Hero"}
+            </button>
+          </div>
+        )}
+
         {/* Section list */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-1 select-none">
+        {activeTab === "sections" && <div className="flex-1 overflow-y-auto p-4 space-y-1 select-none">
           {sections.map((sec, index) => {
             const isDragging = dragItem.current === index;
             const isOver = dragOverIndex === index && dragItem.current !== null && dragItem.current !== index;
@@ -285,20 +417,21 @@ export default function SectionsAdminPage() {
               </div>
             );
           })}
-        </div>
+        </div>}
 
-        {/* Help footer */}
-        <div className="p-4 border-t border-gray-100 flex-shrink-0">
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-            <p className="text-xs text-blue-700 font-medium mb-1">Cómo usar</p>
-            <ul className="text-xs text-blue-600 space-y-0.5">
-              <li>• <strong>Reordenar:</strong> arrastra desde ⠿</li>
-              <li>• <strong>Cambiar altura:</strong> arrastra el borde inferior</li>
-              <li>• <strong>Mostrar/ocultar:</strong> clic en el ojo 👁</li>
-              <li>• El preview se actualiza automáticamente</li>
-            </ul>
+        {activeTab === "sections" && (
+          <div className="p-4 border-t border-gray-100 flex-shrink-0">
+            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+              <p className="text-xs text-blue-700 font-medium mb-1">Cómo usar</p>
+              <ul className="text-xs text-blue-600 space-y-0.5">
+                <li>• <strong>Reordenar:</strong> arrastra desde ⠿</li>
+                <li>• <strong>Cambiar altura:</strong> arrastra el borde inferior</li>
+                <li>• <strong>Mostrar/ocultar:</strong> clic en el ojo 👁</li>
+                <li>• El preview se actualiza automáticamente</li>
+              </ul>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ---- RIGHT PANEL: Preview ---- */}

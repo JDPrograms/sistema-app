@@ -5,8 +5,19 @@ export interface SectionLayout {
   hidden?: boolean;
 }
 
+export interface HeroData {
+  title?: string;
+  subtitle?: string;
+  bgImage?: string;
+  overlay?: number;
+  ctaText?: string;
+  ctaUrl?: string;
+  align?: "left" | "center" | "right";
+}
+
 export interface LayoutConfig {
   sections?: SectionLayout[];
+  heroData?: HeroData;
 }
 
 export function parseLayoutConfig(json: string | null | undefined): LayoutConfig {

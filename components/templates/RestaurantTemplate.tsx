@@ -12,6 +12,7 @@ export default function RestaurantTemplate({ site, appointmentsEnabled = true, c
   const primary = site.primaryColor || "#dc2626";
   const categories = [...new Set(site.products.map((p) => p.category).filter(Boolean))] as string[];
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans bg-amber-50 flex flex-col">
@@ -34,12 +35,20 @@ export default function RestaurantTemplate({ site, appointmentsEnabled = true, c
         </div>
       </header>
 
-      <section style={{ background: `linear-gradient(to right, ${primary}, #b91c1c)`, ...getSecStyle(layout, "hero", 1) }} className="text-white py-20">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-extrabold mb-3">{site.name}</h1>
-          <p className="text-xl opacity-80">{site.description || "Sabor autentico en cada plato."}</p>
-          <div className="flex items-center justify-center gap-6 mt-8 text-sm">
-            {site.phone && (
+      <section className="relative text-white py-20 overflow-hidden" style={getSecStyle(layout, "hero", 1)}>
+        {heroData.bgImage
+          ? <><img src={heroData.bgImage} alt="hero" className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(heroData.overlay ?? 50) / 100})` }} /></>
+          : <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${primary}, #b91c1c)` }} />}
+        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+          <h1 className="text-5xl font-extrabold mb-3">{heroData.title || site.name}</h1>
+          <p className="text-xl opacity-80">{heroData.subtitle || site.description || "Sabor autentico en cada plato."}</p>
+          <div className="flex items-center justify-center gap-6 mt-8 text-sm flex-wrap">
+            {(heroData.ctaText || heroData.ctaUrl) && (
+              <a href={heroData.ctaUrl || "#menu"} className="bg-white/20 hover:bg-white/30 px-5 py-2 rounded-full backdrop-blur-sm transition-colors font-semibold">
+                {heroData.ctaText || "Ver Menú"}
+              </a>
+            )}
+            {!heroData.ctaText && site.phone && (
               <a href={`tel:${site.phone}`} className="bg-white/20 hover:bg-white/30 px-5 py-2 rounded-full backdrop-blur-sm transition-colors">
                 {site.phone}
               </a>

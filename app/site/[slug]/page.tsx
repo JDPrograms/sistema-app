@@ -20,6 +20,11 @@ import VeterinaryTemplate from "@/components/templates/VeterinaryTemplate";
 import LawyerTemplate from "@/components/templates/LawyerTemplate";
 import RealEstateTemplate from "@/components/templates/RealEstateTemplate";
 import HotelTemplate from "@/components/templates/HotelTemplate";
+import PhotographerTemplate from "@/components/templates/PhotographerTemplate";
+import CafeteriaTemplate from "@/components/templates/CafeteriaTemplate";
+import TutorTemplate from "@/components/templates/TutorTemplate";
+import PharmacyTemplate from "@/components/templates/PharmacyTemplate";
+import StoreTemplate from "@/components/templates/StoreTemplate";
 
 export default async function SitePublicPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -62,8 +67,13 @@ export default async function SitePublicPage({ params }: { params: Promise<{ slu
     school:     SchoolTemplate,
     veterinary: VeterinaryTemplate,
     lawyer:     LawyerTemplate,
-    realestate: RealEstateTemplate,
-    hotel:      HotelTemplate,
+    realestate:   RealEstateTemplate,
+    hotel:        HotelTemplate,
+    photographer: PhotographerTemplate,
+    cafeteria:    CafeteriaTemplate,
+    tutor:        TutorTemplate,
+    pharmacy:     PharmacyTemplate,
+    store:        StoreTemplate,
   };
 
   const TemplateComponent = templateMap[site.template] ?? GenericTemplate;

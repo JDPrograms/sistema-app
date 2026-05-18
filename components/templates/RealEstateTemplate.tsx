@@ -23,6 +23,7 @@ export default function RealEstateTemplate({ site, appointmentsEnabled = true, c
   const primary = site.primaryColor || "#2563eb";
   const secondary = site.secondaryColor || "#f59e0b";
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans bg-white flex flex-col">

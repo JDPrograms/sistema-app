@@ -12,6 +12,7 @@ export default function HardwareTemplate({ site, appointmentsEnabled = true, chi
   const primary = site.primaryColor || "#ea580c";
   const categories = [...new Set(site.products.map((p) => p.category).filter(Boolean))] as string[];
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans flex flex-col">

@@ -12,6 +12,7 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
   const primary = site.primaryColor || "#1a1a1a";
   const secondary = site.secondaryColor || "#c9a96e";
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans flex flex-col">
@@ -34,19 +35,20 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
         </div>
       </header>
 
-      <section style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, ...getSecStyle(layout, "hero", 1) }} className="text-white py-24">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-extrabold mb-4">{site.name}</h1>
+      <section className="relative text-white py-24 overflow-hidden" style={getSecStyle(layout, "hero", 1)}>
+        {heroData.bgImage
+          ? <><img src={heroData.bgImage} alt="hero" className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(heroData.overlay ?? 50) / 100})` }} /></>
+          : <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }} />}
+        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+          <h1 className="text-5xl font-extrabold mb-4">{heroData.title || site.name}</h1>
           <p className="text-lg opacity-80 max-w-xl mx-auto mb-8">
-            {site.description || "Bienvenido a nuestra barberia. Calidad y estilo para ti."}
+            {heroData.subtitle || site.description || "Bienvenido a nuestra barberia. Calidad y estilo para ti."}
           </p>
-          {site.phone && (
-            <a href={`tel:${site.phone}`}
-              className="inline-block px-8 py-3 rounded-full font-semibold text-sm transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "white", color: primary }}>
-              Reservar cita · {site.phone}
-            </a>
-          )}
+          <a href={heroData.ctaUrl || `tel:${site.phone}`}
+            className="inline-block px-8 py-3 rounded-full font-semibold text-sm transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "white", color: primary }}>
+            {heroData.ctaText || (site.phone ? `Reservar cita · ${site.phone}` : "Reservar cita")}
+          </a>
         </div>
       </section>
 

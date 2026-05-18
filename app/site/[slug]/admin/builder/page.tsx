@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import ImageUpload from "@/components/ui/ImageUpload";
 
 // ---- Types ----
-type BlockType = "gallery" | "stats" | "testimonials" | "faq" | "cta" | "text";
+type BlockType = "gallery" | "stats" | "testimonials" | "faq" | "cta" | "text" | "pricing" | "team" | "video" | "schedule" | "map" | "features";
 type BlockWidth = "full" | "1/2" | "1/3";
 
 interface PageBlock { id: string; type: BlockType; config: any; order: number; width?: BlockWidth; }
@@ -16,6 +16,12 @@ const BLOCK_PALETTE: { type: BlockType; icon: string; label: string; description
   { type: "faq",           icon: "❓",  label: "Preguntas frecuentes", description: "Acordeon de preguntas y respuestas" },
   { type: "cta",           icon: "📣",  label: "Banner CTA",         description: "Llamado a la accion con boton" },
   { type: "text",          icon: "📝",  label: "Bloque de texto",    description: "Parrafo libre con titulo" },
+  { type: "pricing",       icon: "💰",  label: "Precios / Planes",   description: "Tabla de planes con caracteristicas y botones" },
+  { type: "team",          icon: "👥",  label: "Equipo",             description: "Tarjetas de miembros del equipo" },
+  { type: "video",         icon: "▶️",  label: "Video",              description: "Embed de YouTube o Vimeo" },
+  { type: "schedule",      icon: "🕐",  label: "Horarios",           description: "Tabla de horarios de atencion" },
+  { type: "map",           icon: "📍",  label: "Mapa / Ubicacion",   description: "Google Maps embebido" },
+  { type: "features",      icon: "✨",  label: "Caracteristicas",    description: "Grid de ventajas con iconos" },
 ];
 
 function defaultConfig(type: BlockType): any {
@@ -26,6 +32,12 @@ function defaultConfig(type: BlockType): any {
     case "faq":          return { title: "Preguntas frecuentes", items: [{ q: "¿Como puedo hacer una reserva?", a: "Puedes llamarnos o reservar directamente desde la web." }] };
     case "cta":          return { title: "¿Listo para comenzar?", subtitle: "Contáctanos y recibe una consulta gratuita", buttonText: "Contactar ahora", buttonUrl: "" };
     case "text":         return { title: "Sobre nosotros", body: "Escribe aqui el contenido de esta seccion.", align: "center" };
+    case "pricing":      return { title: "Nuestros planes", subtitle: "Elige el plan que mejor se adapte a ti", plans: [{ name: "Basico", price: "$99", period: "mes", features: ["Caracteristica 1", "Caracteristica 2"], ctaText: "Comenzar", ctaUrl: "", highlight: false }, { name: "Pro", price: "$199", period: "mes", features: ["Todo lo del Basico", "Soporte prioritario", "Sin limites"], ctaText: "Comenzar", ctaUrl: "", highlight: true }] };
+    case "team":         return { title: "Nuestro equipo", members: [{ name: "Juan Perez", role: "Director", bio: "Mas de 10 años de experiencia en el sector.", photo: "" }] };
+    case "video":        return { title: "Conocenos", url: "", caption: "" };
+    case "schedule":     return { title: "Horarios de atencion", items: [{ day: "Lunes", open: "08:00", close: "18:00" }, { day: "Martes", open: "08:00", close: "18:00" }, { day: "Miercoles", open: "08:00", close: "18:00" }, { day: "Jueves", open: "08:00", close: "18:00" }, { day: "Viernes", open: "08:00", close: "18:00" }, { day: "Sabado", open: "09:00", close: "13:00" }, { day: "Domingo", open: "", close: "", closed: true }], note: "" };
+    case "map":          return { title: "Donde estamos", embedUrl: "", address: "", height: 350 };
+    case "features":     return { title: "Por que elegirnos", subtitle: "Estas son nuestras ventajas", items: [{ icon: "⭐", title: "Experiencia", description: "Anos de trayectoria en el sector" }, { icon: "🎯", title: "Precision", description: "Atención personalizada para cada cliente" }, { icon: "💎", title: "Calidad", description: "Los mejores materiales y profesionales" }] };
     default:             return {};
   }
 }
@@ -179,6 +191,123 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function PricingEditor({ config, onChange }: { config: any; onChange: (c: any) => void }) {
+  const plans: any[] = config.plans || [];
+  return (
+    <div className="space-y-3">
+      <Field label="Titulo"><input className={inp} value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} /></Field>
+      <Field label="Subtitulo"><input className={inp} value={config.subtitle || ""} onChange={(e) => onChange({ ...config, subtitle: e.target.value })} /></Field>
+      {plans.map((plan, i) => (
+        <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-500 uppercase">Plan {i + 1}</span>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={!!plan.highlight} onChange={(e) => { const n=[...plans]; n[i]={...plan,highlight:e.target.checked}; onChange({...config,plans:n}); }} /> Popular</label>
+              <button type="button" className="text-red-400 hover:text-red-600 text-xs" onClick={() => onChange({...config,plans:plans.filter((_,j)=>j!==i)})}>× Eliminar</button>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <input className={inp} placeholder="Nombre" value={plan.name||""} onChange={(e)=>{const n=[...plans];n[i]={...plan,name:e.target.value};onChange({...config,plans:n});}} />
+            <input className={inp} placeholder="Precio ($99)" value={plan.price||""} onChange={(e)=>{const n=[...plans];n[i]={...plan,price:e.target.value};onChange({...config,plans:n});}} />
+            <input className={inp} placeholder="Periodo (mes)" value={plan.period||""} onChange={(e)=>{const n=[...plans];n[i]={...plan,period:e.target.value};onChange({...config,plans:n});}} />
+          </div>
+          <textarea className={inp+" resize-none"} rows={3} placeholder={"Caracteristica 1\nCaracteristica 2"} value={(plan.features||[]).join("\n")} onChange={(e)=>{const n=[...plans];n[i]={...plan,features:e.target.value.split("\n")};onChange({...config,plans:n});}} />
+          <div className="grid grid-cols-2 gap-2">
+            <input className={inp} placeholder="Texto boton" value={plan.ctaText||""} onChange={(e)=>{const n=[...plans];n[i]={...plan,ctaText:e.target.value};onChange({...config,plans:n});}} />
+            <input className={inp} placeholder="URL boton" value={plan.ctaUrl||""} onChange={(e)=>{const n=[...plans];n[i]={...plan,ctaUrl:e.target.value};onChange({...config,plans:n});}} />
+          </div>
+        </div>
+      ))}
+      {plans.length < 4 && <button type="button" className={addBtn} onClick={()=>onChange({...config,plans:[...plans,{name:"",price:"",period:"mes",features:[],ctaText:"Comenzar",ctaUrl:"",highlight:false}]})}>+ Agregar plan</button>}
+    </div>
+  );
+}
+
+function TeamEditor({ config, onChange, slug }: { config: any; onChange: (c: any) => void; slug?: string }) {
+  const members: any[] = config.members || [];
+  return (
+    <div className="space-y-3">
+      <Field label="Titulo"><input className={inp} value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} /></Field>
+      {members.map((m, i) => (
+        <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-100">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-bold text-gray-500 uppercase">Miembro {i+1}</span>
+            <button type="button" className="text-red-400 text-xs" onClick={()=>onChange({...config,members:members.filter((_,j)=>j!==i)})}>× Eliminar</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input className={inp} placeholder="Nombre" value={m.name||""} onChange={(e)=>{const n=[...members];n[i]={...m,name:e.target.value};onChange({...config,members:n});}} />
+            <input className={inp} placeholder="Cargo / Rol" value={m.role||""} onChange={(e)=>{const n=[...members];n[i]={...m,role:e.target.value};onChange({...config,members:n});}} />
+          </div>
+          <input className={inp} placeholder="Breve bio (opcional)" value={m.bio||""} onChange={(e)=>{const n=[...members];n[i]={...m,bio:e.target.value};onChange({...config,members:n});}} />
+          <ImageUpload value={m.photo||""} onChange={(v)=>{const n=[...members];n[i]={...m,photo:v};onChange({...config,members:n});}} slug={slug} label="Foto" previewHeight="h-12" />
+        </div>
+      ))}
+      {members.length < 8 && <button type="button" className={addBtn} onClick={()=>onChange({...config,members:[...members,{name:"",role:"",bio:"",photo:""}]})}>+ Agregar miembro</button>}
+    </div>
+  );
+}
+
+function VideoEditor({ config, onChange }: { config: any; onChange: (c: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Field label="Titulo (opcional)"><input className={inp} value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} /></Field>
+      <Field label="URL del video (YouTube o Vimeo)"><input className={inp} value={config.url || ""} placeholder="https://www.youtube.com/watch?v=..." onChange={(e) => onChange({ ...config, url: e.target.value })} /></Field>
+      <Field label="Pie de video (opcional)"><input className={inp} value={config.caption || ""} onChange={(e) => onChange({ ...config, caption: e.target.value })} /></Field>
+    </div>
+  );
+}
+
+function ScheduleEditor({ config, onChange }: { config: any; onChange: (c: any) => void }) {
+  const items: any[] = config.items || [];
+  return (
+    <div className="space-y-3">
+      <Field label="Titulo"><input className={inp} value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} /></Field>
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <div key={i} className="flex gap-2 items-center">
+            <input className={inp + " w-28"} placeholder="Lunes" value={item.day||""} onChange={(e)=>{const n=[...items];n[i]={...item,day:e.target.value};onChange({...config,items:n});}} />
+            <label className="flex items-center gap-1 text-xs text-gray-500 flex-shrink-0"><input type="checkbox" checked={!!item.closed} onChange={(e)=>{const n=[...items];n[i]={...item,closed:e.target.checked};onChange({...config,items:n});}} />Cerrado</label>
+            {!item.closed && (<><input className={inp + " w-20"} placeholder="09:00" value={item.open||""} onChange={(e)=>{const n=[...items];n[i]={...item,open:e.target.value};onChange({...config,items:n});}} /><span className="text-gray-400 flex-shrink-0">–</span><input className={inp + " w-20"} placeholder="18:00" value={item.close||""} onChange={(e)=>{const n=[...items];n[i]={...item,close:e.target.value};onChange({...config,items:n});}} /></>)}
+            <button type="button" className="text-red-400 hover:text-red-600 text-sm flex-shrink-0" onClick={()=>onChange({...config,items:items.filter((_,j)=>j!==i)})}>×</button>
+          </div>
+        ))}
+        <button type="button" className={addBtn} onClick={()=>onChange({...config,items:[...items,{day:"",open:"",close:"",closed:false}]})}>+ Agregar dia</button>
+      </div>
+      <Field label="Nota adicional (opcional)"><input className={inp} value={config.note || ""} onChange={(e) => onChange({ ...config, note: e.target.value })} /></Field>
+    </div>
+  );
+}
+
+function MapEditor({ config, onChange }: { config: any; onChange: (c: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Field label="Titulo (opcional)"><input className={inp} value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} /></Field>
+      <Field label="URL del embed de Google Maps"><input className={inp} value={config.embedUrl || ""} placeholder="https://www.google.com/maps/embed?pb=..." onChange={(e) => onChange({ ...config, embedUrl: e.target.value })} /></Field>
+      <Field label="Direccion visible (opcional)"><input className={inp} value={config.address || ""} placeholder="Calle 123, Ciudad" onChange={(e) => onChange({ ...config, address: e.target.value })} /></Field>
+      <Field label="Altura del mapa (px)"><input type="number" className={inp} value={config.height || 350} min={200} max={600} onChange={(e) => onChange({ ...config, height: Number(e.target.value) })} /></Field>
+    </div>
+  );
+}
+
+function FeaturesEditor({ config, onChange }: { config: any; onChange: (c: any) => void }) {
+  const items: any[] = config.items || [];
+  return (
+    <div className="space-y-3">
+      <Field label="Titulo"><input className={inp} value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} /></Field>
+      <Field label="Subtitulo"><input className={inp} value={config.subtitle || ""} onChange={(e) => onChange({ ...config, subtitle: e.target.value })} /></Field>
+      {items.map((item, i) => (
+        <div key={i} className="flex gap-2 items-start">
+          <input className={inp + " w-14 text-center"} placeholder="⭐" value={item.icon||""} onChange={(e)=>{const n=[...items];n[i]={...item,icon:e.target.value};onChange({...config,items:n});}} />
+          <input className={inp + " flex-1"} placeholder="Titulo" value={item.title||""} onChange={(e)=>{const n=[...items];n[i]={...item,title:e.target.value};onChange({...config,items:n});}} />
+          <input className={inp + " flex-1"} placeholder="Descripcion" value={item.description||""} onChange={(e)=>{const n=[...items];n[i]={...item,description:e.target.value};onChange({...config,items:n});}} />
+          <button type="button" className="text-red-400 hover:text-red-600 text-sm flex-shrink-0 mt-2" onClick={()=>onChange({...config,items:items.filter((_,j)=>j!==i)})}>×</button>
+        </div>
+      ))}
+      {items.length < 9 && <button type="button" className={addBtn} onClick={()=>onChange({...config,items:[...items,{icon:"",title:"",description:""}]})}>+ Agregar caracteristica</button>}
+    </div>
+  );
+}
+
 function BlockEditor({ block, onChange, slug }: { block: PageBlock; onChange: (c: any) => void; slug?: string }) {
   switch (block.type) {
     case "gallery":      return <GalleryEditor config={block.config} onChange={onChange} slug={slug} />;
@@ -187,6 +316,12 @@ function BlockEditor({ block, onChange, slug }: { block: PageBlock; onChange: (c
     case "faq":          return <FaqEditor config={block.config} onChange={onChange} />;
     case "cta":          return <CtaEditor config={block.config} onChange={onChange} />;
     case "text":         return <TextEditor config={block.config} onChange={onChange} />;
+    case "pricing":      return <PricingEditor config={block.config} onChange={onChange} />;
+    case "team":         return <TeamEditor config={block.config} onChange={onChange} slug={slug} />;
+    case "video":        return <VideoEditor config={block.config} onChange={onChange} />;
+    case "schedule":     return <ScheduleEditor config={block.config} onChange={onChange} />;
+    case "map":          return <MapEditor config={block.config} onChange={onChange} />;
+    case "features":     return <FeaturesEditor config={block.config} onChange={onChange} />;
     default:             return null;
   }
 }

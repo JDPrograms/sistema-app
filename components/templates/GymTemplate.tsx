@@ -18,6 +18,7 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
   const secondary = site.secondaryColor || "#f97316";
   const activeStaff = site.staff.filter((s) => s.isActive);
   const layout = parseLayoutConfig(layoutConfig);
+  const heroData = (layout as any).heroData || {};
 
   return (
     <div className="min-h-screen font-sans bg-[#111] text-white flex flex-col">
@@ -44,31 +45,28 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
       </header>
 
       {/* HERO */}
-      <section
-        className="relative py-28 flex items-center justify-center overflow-hidden"
-        style={{ background: `linear-gradient(135deg, #111 0%, #1a1a1a 50%, ${primary}22 100%)`, ...getSecStyle(layout, "hero", 1) }}
-      >
-        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "20px 20px" }} />
+      <section className="relative py-28 flex items-center justify-center overflow-hidden" style={getSecStyle(layout, "hero", 1)}>
+        {heroData.bgImage
+          ? <><img src={heroData.bgImage} alt="hero" className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(heroData.overlay ?? 60) / 100})` }} /></>
+          : <><div className="absolute inset-0" style={{ background: `linear-gradient(135deg, #111 0%, #1a1a1a 50%, ${primary}22 100%)` }} /><div className="absolute inset-0 opacity-5" style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "20px 20px" }} /></>}
         <div className="relative max-w-4xl mx-auto px-6 text-center">
           <div className="inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6 border" style={{ borderColor: primary, color: primary }}>
             Entrena. Superate. Conquista.
           </div>
           <h1 className="text-5xl md:text-7xl font-black uppercase leading-none mb-6">
-            {site.name}
+            {heroData.title || site.name}
           </h1>
           <p className="text-lg text-gray-400 max-w-xl mx-auto mb-10">
-            {site.description || "El lugar donde los limites se rompen y los resultados hablan por si solos."}
+            {heroData.subtitle || site.description || "El lugar donde los limites se rompen y los resultados hablan por si solos."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {site.phone && (
-              <a
-                href={`tel:${site.phone}`}
-                className="px-8 py-4 rounded-full font-bold text-sm uppercase tracking-widest transition-opacity hover:opacity-80"
-                style={{ backgroundColor: primary }}
-              >
-                Llamar ahora
-              </a>
-            )}
+            <a
+              href={heroData.ctaUrl || (site.phone ? `tel:${site.phone}` : "#clases")}
+              className="px-8 py-4 rounded-full font-bold text-sm uppercase tracking-widest transition-opacity hover:opacity-80"
+              style={{ backgroundColor: primary }}
+            >
+              {heroData.ctaText || (site.phone ? "Llamar ahora" : "Ver clases")}
+            </a>
             <a
               href="#clases"
               className="px-8 py-4 rounded-full font-bold text-sm uppercase tracking-widest border border-white/20 hover:border-white/50 transition-colors"
