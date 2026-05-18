@@ -100,7 +100,7 @@ export default function StoreTemplate({ site, appointmentsEnabled = true, childr
         <section id="productos" className="py-20 bg-white" style={getSecStyle(layout, "products", 2)}>
           <div className="max-w-7xl mx-auto px-6">
             {(() => {
-              const items = site.products?.length > 0 ? site.products : site.services.map((s) => ({ ...s, comparePrice: null, stock: null, featured: false, category: null }));
+              const items = site.products?.length > 0 ? site.products : site.services.map((s) => ({ ...s, imageUrl: null as string | null, comparePrice: null, stock: null, featured: false, category: null }));
               return (
                 <>
                   <div className="flex items-center justify-between mb-10">
