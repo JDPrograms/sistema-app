@@ -8,7 +8,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
   const session = await auth();
   const role = (session?.user as any)?.role;
   const { slug } = await params;
-  if (!session || (role !== "superadmin" && role !== "siteadmin")) {
+  if (!session || role !== "superadmin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const site = await prisma.site.findUnique({
@@ -41,7 +41,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
   const session = await auth();
   const role = (session?.user as any)?.role;
   const { slug } = await params;
-  if (!session || (role !== "superadmin" && role !== "siteadmin")) {
+  if (!session || role !== "superadmin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const body = await req.json();

@@ -81,7 +81,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const session = await auth();
   const role = (session?.user as any)?.role;
   await params;
-  if (!session || (role !== "superadmin" && role !== "siteadmin")) {
+  if (!session || role !== "superadmin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

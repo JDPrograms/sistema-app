@@ -63,6 +63,7 @@ export default function SupportPage() {
   const slug = params.slug as string;
 
   const [tab, setTab] = useState<"chats" | "agents" | "queues" | "whatsapp">("chats");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // WhatsApp config state
   const [waConfig, setWaConfig] = useState({ enabled: false, phoneNumberId: "", displayPhoneNumber: "", hasToken: false, verifyToken: "", appId: "", hasAppSecret: false, webhookAutoConfigured: false });
@@ -148,7 +149,10 @@ export default function SupportPage() {
       if (sessRes.ok) {
         const s = await sessRes.json();
         const u = s?.user;
-        if (u) setMyInfo({ id: u.id || u.adminId || "", name: u.name || "", email: u.email || "" });
+        if (u) {
+          setMyInfo({ id: u.id || u.adminId || "", name: u.name || "", email: u.email || "" });
+          setIsSuperAdmin(u.role === "superadmin");
+        }
       }
       await Promise.all([loadSessions(), loadAgents(), loadQueues(), loadWaConfig()]);
       setLoading(false);
@@ -329,8 +333,8 @@ export default function SupportPage() {
             <span>📊</span> Métricas
           </Link>
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-            {(["chats", "agents", "queues", "whatsapp"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
+            {(["chats", "agents", "queues", ...(isSuperAdmin ? ["whatsapp"] : [])] as const).map((t) => (
+              <button key={t} onClick={() => setTab(t as typeof tab)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
                 {t === "chats" ? "Conversaciones" : t === "agents" ? "Agentes" : t === "queues" ? "Colas" : "📱 WhatsApp"}
               </button>
