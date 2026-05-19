@@ -2,8 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import type { Metadata } from "next";
-import PwaInstallPrompt from "@/components/PwaInstallPrompt";
-
 function parseMods(s: string): Record<string, boolean> {
   try { return JSON.parse(s); } catch { return {}; }
 }
@@ -43,10 +41,5 @@ export default async function SiteLayout({
   const site = await getSite(slug);
   if (!site || !site.isActive) notFound();
   const mods = parseMods(site.modules ?? "{}");
-  return (
-    <>
-      {children}
-      {mods.pwa === true && <PwaInstallPrompt siteName={site.pwaShortName || site.name} />}
-    </>
-  );
+  return <>{children}</>;
 }
