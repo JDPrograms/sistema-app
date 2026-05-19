@@ -8,20 +8,24 @@ export default function GoogleCompletePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("t");
+  const role = searchParams.get("role") || "user";
 
   useEffect(() => {
     if (!token || !slug) {
       router.replace(`/site/${slug}/login?error=google`);
       return;
     }
-    signIn("google-siteuser", { token, siteSlug: slug, redirect: false }).then((res) => {
+    const provider = role === "admin" ? "google-siteadmin" : "google-siteuser";
+    const redirectTo = role === "admin" ? `/site/${slug}/admin` : `/site/${slug}/portal`;
+
+    signIn(provider, { token, siteSlug: slug, redirect: false }).then((res) => {
       if (res?.ok) {
-        router.replace(`/site/${slug}/portal`);
+        router.replace(redirectTo);
       } else {
         router.replace(`/site/${slug}/login?error=google`);
       }
     });
-  }, [token, slug, router]);
+  }, [token, slug, role, router]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

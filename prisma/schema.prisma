@@ -126,18 +126,22 @@ model PushSubscription {
 }
 
 model SiteAdmin {
-  id          String   @id @default(cuid())
-  email       String
-  password    String
-  name        String
-  siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  isOwner     Boolean  @default(false)
-  permissions String   @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  email              String
+  password           String
+  name               String
+  siteId             String
+  site               Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  isOwner            Boolean   @default(false)
+  permissions        String    @default("{}")
+  googleId           String?
+  googleLoginToken   String?
+  googleLoginExpires DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@unique([email, siteId])
+  @@index([googleLoginToken])
 }
 
 model SiteUser {

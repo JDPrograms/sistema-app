@@ -146,7 +146,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         });
         if (!user) return null;
-        // Consume the one-time token
         await prisma.siteUser.update({
           where: { id: user.id },
           data: { googleLoginToken: null, googleLoginExpires: null },
@@ -158,6 +157,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: "siteuser",
           siteId: site.id,
           siteSlug: site.slug,
+        };
+      },
+    }),
+    Credentials({
+      id: "google-siteadmin",
+      name: "Google Site Admin",
+      credentials: {
+        token: { label: "Token", type: "text" },
+        siteSlug: { label: "Site", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.token || !credentials?.siteSlug) return null;
+        const site = await prisma.site.findUnique({ where: { slug: credentials.siteSlug as string } });
+        if (!site) return null;
+        const admin = await prisma.siteAdmin.findFirst({
+          where: {
+            googleLoginToken: credentials.token as string,
+            siteId: site.id,
+            googleLoginExpires: { gt: new Date() },
+          },
+        });
+        if (!admin) return null;
+        await prisma.siteAdmin.update({
+          where: { id: admin.id },
+          data: { googleLoginToken: null, googleLoginExpires: null },
+        });
+        const perms = parseSitePerms(admin.permissions, admin.isOwner);
+        return {
+          id: admin.id,
+          email: admin.email,
+          name: admin.name,
+          role: "siteadmin",
+          siteId: site.id,
+          siteSlug: site.slug,
+          isOwner: admin.isOwner,
+          permissions: perms,
         };
       },
     }),

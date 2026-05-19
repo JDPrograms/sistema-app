@@ -8,11 +8,12 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
 
-  // Parse state
   let slug = "";
+  let role = "user";
   try {
     const decoded = JSON.parse(Buffer.from(state || "", "base64url").toString());
     slug = decoded.slug || "";
+    role = decoded.role || "user";
   } catch {
     return NextResponse.redirect(new URL("/login?error=google", req.url));
   }
@@ -41,25 +42,41 @@ export async function GET(req: Request) {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const googleUser = await userRes.json();
-    const { id: googleId, email, name, picture } = googleUser;
-
+    const { id: googleId, email, name } = googleUser;
     if (!email) throw new Error("No email from Google");
 
-    // Find site
     const site = await prisma.site.findUnique({ where: { slug }, select: { id: true } });
     if (!site) return NextResponse.redirect(new URL(`/site/${slug}/login?error=site`, req.url));
 
-    // Find or create SiteUser
+    const googleLoginToken = randomBytes(32).toString("hex");
+    const googleLoginExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+    if (role === "admin") {
+      // Admin: must already exist — only link Google, never auto-create
+      const admin = await prisma.siteAdmin.findUnique({
+        where: { email_siteId: { email: email.toLowerCase(), siteId: site.id } },
+      });
+      if (!admin) {
+        // No admin account with that Google email
+        return NextResponse.redirect(new URL(`/site/${slug}/login?error=no_admin`, req.url));
+      }
+      await prisma.siteAdmin.update({
+        where: { id: admin.id },
+        data: { googleId, googleLoginToken, googleLoginExpires },
+      });
+      return NextResponse.redirect(new URL(`/site/${slug}/portal/google-complete?t=${googleLoginToken}&role=admin`, req.url));
+    }
+
+    // User role: find or create
     let user = await prisma.siteUser.findFirst({
       where: { OR: [{ googleId, siteId: site.id }, { email: email.toLowerCase(), siteId: site.id }] },
     });
-
     if (!user) {
       user = await prisma.siteUser.create({
         data: {
           email: email.toLowerCase(),
           name: name || email,
-          password: randomBytes(32).toString("hex"), // unusable random password
+          password: randomBytes(32).toString("hex"),
           siteId: site.id,
           emailVerified: true,
           provider: "google",
@@ -67,24 +84,16 @@ export async function GET(req: Request) {
         },
       });
     } else if (!user.googleId) {
-      // Link existing email account to Google
       user = await prisma.siteUser.update({
         where: { id: user.id },
         data: { googleId, emailVerified: true, provider: "google" },
       });
     }
-
-    // Generate one-time login token (valid 5 minutes)
-    const googleLoginToken = randomBytes(32).toString("hex");
     await prisma.siteUser.update({
       where: { id: user.id },
-      data: {
-        googleLoginToken,
-        googleLoginExpires: new Date(Date.now() + 5 * 60 * 1000),
-      },
+      data: { googleLoginToken, googleLoginExpires },
     });
-
-    return NextResponse.redirect(new URL(`/site/${slug}/portal/google-complete?t=${googleLoginToken}`, req.url));
+    return NextResponse.redirect(new URL(`/site/${slug}/portal/google-complete?t=${googleLoginToken}&role=user`, req.url));
   } catch (e) {
     console.error("Google callback error:", e);
     return NextResponse.redirect(new URL(`/site/${slug}/login?error=google`, req.url));
