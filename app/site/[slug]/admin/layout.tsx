@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import AdminChat from "@/components/ai/AdminChat";
 import SiteAdminSidebar from "@/components/admin/SiteAdminSidebar";
+import { PushSubscriber } from "@/components/PushSubscriber";
 
 function getExpiryStatus(site: { planType: string; expiresAt: Date | null; expiryReason: string | null }) {
   if (site.planType !== "timed" || !site.expiresAt) return null;
@@ -117,6 +118,7 @@ export default async function SiteAdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <PushSubscriber />
       {/* Expiry banner */}
       {expiryStatus && expiryStatus.type !== "expired" && (
         <div className={`w-full px-4 py-2.5 text-sm font-medium text-center flex items-center justify-center gap-2 ${

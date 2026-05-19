@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendEmail, appointmentConfirmationHtml } from "@/lib/email";
+import { sendPushToSite } from "@/lib/push";
 
 function canManage(session: any, slug: string) {
   const role = session?.user?.role;
@@ -65,5 +67,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       status: "pending",
     },
   });
+
+  // Send confirmation email (fire and forget)
+  sendEmail({
+    apiKey: (site as any).emailApiKey,
+    from: (site as any).emailFrom,
+    to: clientEmail,
+    subject: `Cita confirmada — ${(site as any).name}`,
+    html: appointmentConfirmationHtml({
+      clientName,
+      serviceName: service?.name,
+      date,
+      time,
+      businessName: (site as any).name,
+      businessPhone: (site as any).phone,
+    }),
+  }).catch(console.error);
+
+  // Push notification to site admins
+  sendPushToSite(site.id, {
+    title: "Nueva cita",
+    body: `${clientName} — ${date} ${time}`,
+    url: `/site/${slug}/admin/appointments`,
+  }).catch(console.error);
+
   return NextResponse.json(appointment, { status: 201 });
 }

@@ -62,7 +62,7 @@ export default function SupportPage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  const [tab, setTab] = useState<"chats" | "agents" | "queues" | "whatsapp">("chats");
+  const [tab, setTab] = useState<"chats" | "agents" | "queues" | "whatsapp" | "instagram">("chats");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // WhatsApp config state
@@ -83,6 +83,15 @@ export default function SupportPage() {
   const [waManualPhoneId, setWaManualPhoneId] = useState("");
   const [waManualDisplayPhone, setWaManualDisplayPhone] = useState("");
   const [waSetupMode, setWaSetupMode] = useState<"manual" | "auto">("manual");
+
+  // Instagram config state
+  const [igConfig, setIgConfig] = useState({ enabled: false, instagramUserId: "", hasToken: false, verifyToken: "" });
+  const [igLoading, setIgLoading] = useState(false);
+  const [igSaving, setIgSaving] = useState(false);
+  const [igUserId, setIgUserId] = useState("");
+  const [igToken, setIgToken] = useState("");
+  const [igMsg, setIgMsg] = useState("");
+
   const [statusFilter, setStatusFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
   const [queueFilter, setQueueFilter] = useState<string>("all");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -142,6 +151,17 @@ export default function SupportPage() {
     setWaLoading(false);
   }, [slug]);
 
+  const loadIgConfig = useCallback(async () => {
+    setIgLoading(true);
+    const res = await fetch(`/api/site/${slug}/support/instagram`);
+    if (res.ok) {
+      const d = await res.json();
+      setIgConfig({ enabled: d.enabled, instagramUserId: d.instagramUserId || "", hasToken: d.hasToken, verifyToken: d.verifyToken || "" });
+      if (d.instagramUserId) setIgUserId(d.instagramUserId);
+    }
+    setIgLoading(false);
+  }, [slug]);
+
   useEffect(() => {
     async function init() {
       setLoading(true);
@@ -154,11 +174,11 @@ export default function SupportPage() {
           setIsSuperAdmin(u.role === "superadmin");
         }
       }
-      await Promise.all([loadSessions(), loadAgents(), loadQueues(), loadWaConfig()]);
+      await Promise.all([loadSessions(), loadAgents(), loadQueues(), loadWaConfig(), loadIgConfig()]);
       setLoading(false);
     }
     init();
-  }, [loadSessions, loadAgents, loadQueues, loadWaConfig]);
+  }, [loadSessions, loadAgents, loadQueues, loadWaConfig, loadIgConfig]);
 
   // Polling every 4s
   useEffect(() => {
@@ -333,10 +353,10 @@ export default function SupportPage() {
             <span>📊</span> Métricas
           </Link>
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-            {(["chats", "agents", "queues", ...(isSuperAdmin ? ["whatsapp"] : [])] as const).map((t) => (
+            {(["chats", "agents", "queues", ...(isSuperAdmin ? ["whatsapp", "instagram"] : [])] as const).map((t) => (
               <button key={t} onClick={() => setTab(t as typeof tab)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
-                {t === "chats" ? "Conversaciones" : t === "agents" ? "Agentes" : t === "queues" ? "Colas" : "📱 WhatsApp"}
+                {t === "chats" ? "Conversaciones" : t === "agents" ? "Agentes" : t === "queues" ? "Colas" : t === "whatsapp" ? "📱 WhatsApp" : "📸 Instagram"}
               </button>
             ))}
           </div>
@@ -691,6 +711,138 @@ export default function SupportPage() {
                   <p className="text-blue-600 text-xs">Los mensajes de WhatsApp aparecerán en la pestaña <strong>Conversaciones</strong> con el ícono 📱</p>
                 </div>
               )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── INSTAGRAM TAB ──────────────────────────────────────────── */}
+      {tab === "instagram" && (
+        <div className="flex-1 overflow-auto p-6 space-y-6 max-w-2xl">
+          {igLoading ? (
+            <p className="text-gray-400 text-sm">Cargando configuración...</p>
+          ) : (
+            <>
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-bold text-gray-900">Instagram Direct Messages</h2>
+                    <p className="text-sm text-gray-400 mt-0.5">Conecta tu página de Instagram Business para recibir y responder DMs con IA</p>
+                  </div>
+                  {igConfig.hasToken && igConfig.instagramUserId && (
+                    <div
+                      onClick={async () => {
+                        const next = !igConfig.enabled;
+                        setIgConfig((p) => ({ ...p, enabled: next }));
+                        await fetch(`/api/site/${slug}/support/instagram`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ enabled: next }),
+                        });
+                      }}
+                      className={`w-11 h-6 rounded-full transition-colors cursor-pointer relative flex-shrink-0 ${igConfig.enabled ? "bg-pink-500" : "bg-gray-300"}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${igConfig.enabled ? "left-5" : "left-0.5"}`} />
+                    </div>
+                  )}
+                </div>
+
+                {igConfig.hasToken && igConfig.instagramUserId && (
+                  <div className="flex items-center gap-3 p-3 bg-pink-50 border border-pink-200 rounded-xl">
+                    <span className="text-2xl">✅</span>
+                    <div>
+                      <p className="text-sm font-semibold text-pink-800">Instagram conectado</p>
+                      <p className="text-xs text-pink-600">User ID: {igConfig.instagramUserId} · {igConfig.enabled ? "Activo" : "Desactivado"}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Instagram User ID *</label>
+                    <input
+                      value={igUserId}
+                      onChange={(e) => setIgUserId(e.target.value)}
+                      placeholder="17841400123456789"
+                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-0.5">Meta for Developers → Tu App → Instagram → API Setup → Instagram User ID de la página</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Access Token {igConfig.hasToken ? "(ya guardado, solo escribe para cambiar)" : "*"}
+                    </label>
+                    <input
+                      type="password"
+                      value={igToken}
+                      onChange={(e) => setIgToken(e.target.value)}
+                      placeholder={igConfig.hasToken ? "sin cambios" : "EAAxxxxxxxxxx..."}
+                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-0.5">Token de página de Facebook con permisos instagram_manage_messages, pages_messaging</p>
+                  </div>
+
+                  {igMsg && <p className={`text-sm font-medium ${igMsg.includes("Error") ? "text-red-600" : "text-green-600"}`}>{igMsg}</p>}
+
+                  <button
+                    onClick={async () => {
+                      if (!igUserId.trim()) { setIgMsg("El Instagram User ID es obligatorio"); return; }
+                      if (!igToken.trim() && !igConfig.hasToken) { setIgMsg("El Access Token es obligatorio"); return; }
+                      setIgSaving(true); setIgMsg("");
+                      const res = await fetch(`/api/site/${slug}/support/instagram`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ instagramUserId: igUserId, token: igToken || undefined, enabled: true }),
+                      });
+                      setIgSaving(false);
+                      if (res.ok) {
+                        setIgMsg("✓ Instagram guardado");
+                        setIgToken("");
+                        await loadIgConfig();
+                      } else {
+                        setIgMsg("Error al guardar");
+                      }
+                    }}
+                    disabled={igSaving || !igUserId.trim()}
+                    className="w-full px-4 py-2.5 bg-pink-600 text-white rounded-xl text-sm font-medium hover:bg-pink-700 disabled:opacity-50 transition-colors">
+                    {igSaving ? "Guardando..." : "Guardar Instagram"}
+                  </button>
+                </div>
+
+                {igConfig.verifyToken && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 mb-1">Token de verificación del webhook</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 break-all">
+                        {igConfig.verifyToken}
+                      </code>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(igConfig.verifyToken).catch(() => {})}
+                        className="text-xs px-3 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
+                        Copiar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-pink-50 border border-pink-200 rounded-2xl p-5 text-sm text-pink-800 space-y-2">
+                <p className="font-semibold">Configuración del webhook en Meta:</p>
+                <ol className="list-decimal pl-5 space-y-1 text-pink-700">
+                  <li>Ve a <strong>Meta for Developers</strong> → Tu App → Instagram → Webhooks</li>
+                  <li>URL del callback:
+                    <code className="block bg-pink-100 px-2 py-1 rounded mt-1 text-xs break-all">
+                      {typeof window !== "undefined" ? window.location.origin : "https://tu-dominio.com"}/api/webhooks/instagram
+                    </code>
+                  </li>
+                  <li>Verify Token: <strong>el token de arriba</strong></li>
+                  <li>Suscríbete al campo <strong>messages</strong></li>
+                  <li>Asegúrate de que tu app tenga permisos: <code className="bg-pink-100 px-1 rounded">instagram_manage_messages</code>, <code className="bg-pink-100 px-1 rounded">pages_messaging</code></li>
+                </ol>
+                <p className="text-pink-600 text-xs mt-1">
+                  A diferencia de WhatsApp, Instagram no requiere "Live Mode" para los mensajes del dueño de la página.
+                  Para mensajes de cualquier usuario necesitas aprobación de Meta (revisión de app).
+                </p>
+              </div>
             </>
           )}
         </div>

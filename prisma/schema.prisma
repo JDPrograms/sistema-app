@@ -78,6 +78,11 @@ model Site {
   whatsappVerifyToken   String?
   whatsappAppId         String?
   whatsappAppSecret     String?
+  instagramUserId       String?
+  instagramToken        String?
+  instagramVerifyToken  String?
+  emailFrom             String?
+  emailApiKey           String?
   socialLinks    String   @default("{}")
   businessHours  String   @default("[]")
   seoTitle       String?
@@ -101,9 +106,23 @@ model Site {
   invoices       SiteInvoice[]
   expenses       SiteExpense[]
   inventoryLogs  SiteInventoryLog[]
-  chatSessions   SiteChatSession[]
-  chatAgents     SiteChatAgent[]
-  supportQueues  SupportQueue[]
+  chatSessions      SiteChatSession[]
+  chatAgents        SiteChatAgent[]
+  supportQueues     SupportQueue[]
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  adminId   String?
+  createdAt DateTime @default(now())
+
+  @@index([siteId])
 }
 
 model SiteAdmin {

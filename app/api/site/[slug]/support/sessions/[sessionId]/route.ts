@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToSite } from "@/lib/push";
 
 // Public: GET session + messages
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string; sessionId: string }> }) {
@@ -80,6 +81,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
         content: "Solicitud de agente enviada. Un agente se unirá pronto.",
       },
     });
+    // Push notification to site admins when a user requests a human agent
+    const chatSess = await prisma.siteChatSession.findUnique({ where: { id: sessionId }, select: { siteId: true, clientName: true } });
+    if (chatSess) {
+      sendPushToSite(chatSess.siteId, {
+        title: "Cliente solicita agente",
+        body: `${chatSess.clientName || "Visitante"} quiere hablar con un agente`,
+        url: `/site/${slug}/admin/support`,
+      }).catch(console.error);
+    }
   }
   if (status === "resolved") {
     await prisma.siteChatMessage.create({

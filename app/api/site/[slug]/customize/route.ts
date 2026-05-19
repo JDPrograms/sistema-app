@@ -48,6 +48,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
   if (body.businessHours !== undefined) data.businessHours = typeof body.businessHours === "string" ? body.businessHours : JSON.stringify(body.businessHours ?? []);
   if (body.seoTitle !== undefined) data.seoTitle = body.seoTitle ?? null;
   if (body.seoDescription !== undefined) data.seoDescription = body.seoDescription ?? null;
+  if (body.emailFrom !== undefined) data.emailFrom = body.emailFrom ?? null;
+  if (body.emailApiKey !== undefined && body.emailApiKey.trim()) data.emailApiKey = body.emailApiKey.trim();
   // Extract pageBlocks and layoutConfig to handle via raw SQL (avoids Prisma binary schema mismatch)
   const pageBlocksValue = body.pageBlocks !== undefined
     ? (typeof body.pageBlocks === "string" ? body.pageBlocks : JSON.stringify(body.pageBlocks ?? []))

@@ -24,7 +24,7 @@ const COLOR_PRESETS = [
   { label: "Gris oscuro",  primary: "#374151", secondary: "#111827" },
 ];
 
-type Tab = "apariencia" | "contacto" | "redes" | "horarios" | "seo";
+type Tab = "apariencia" | "contacto" | "redes" | "horarios" | "seo" | "email";
 
 interface HourRow { day: string; isOpen: boolean; open: string; close: string; }
 interface SocialLinks { instagram: string; facebook: string; twitter: string; tiktok: string; youtube: string; }
@@ -37,6 +37,7 @@ interface FormData {
   socialLinks: SocialLinks;
   businessHours: HourRow[];
   seoTitle: string; seoDescription: string;
+  emailFrom: string; emailApiKey: string;
 }
 
 const emptyForm: FormData = {
@@ -48,6 +49,7 @@ const emptyForm: FormData = {
   socialLinks: { instagram: "", facebook: "", twitter: "", tiktok: "", youtube: "" },
   businessHours: DEFAULT_HOURS,
   seoTitle: "", seoDescription: "",
+  emailFrom: "", emailApiKey: "",
 };
 
 export default function CustomizePage() {
@@ -84,6 +86,8 @@ export default function CustomizePage() {
           businessHours,
           seoTitle: d.seoTitle || "",
           seoDescription: d.seoDescription || "",
+          emailFrom: d.emailFrom || "",
+          emailApiKey: "",
         });
       }
       setLoading(false);
@@ -128,6 +132,7 @@ export default function CustomizePage() {
     { id: "redes",      label: "Redes sociales", icon: "🔗" },
     { id: "horarios",   label: "Horarios",    icon: "🕐" },
     { id: "seo",        label: "SEO",         icon: "🔍" },
+    { id: "email",      label: "Email",       icon: "📧" },
   ];
 
   const inp = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -475,6 +480,39 @@ export default function CustomizePage() {
                   {form.seoDescription || form.description || "Descripcion del sitio web. Se muestra en los resultados de busqueda de Google."}
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== EMAIL ===== */}
+        {tab === "email" && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+            <div>
+              <h2 className="font-semibold text-gray-900">Configuracion de Email</h2>
+              <p className="text-sm text-gray-400 mt-0.5">Emails automaticos: confirmaciones de citas, bienvenidas, facturas. Usa <a href="https://resend.com" target="_blank" rel="noopener" className="text-blue-600 underline">Resend</a>.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email remitente (From)</label>
+              <input value={form.emailFrom} onChange={(e) => set("emailFrom", e.target.value)}
+                className={inp} placeholder="noreply@tudominio.com"
+                type="email" />
+              <p className="text-xs text-gray-400 mt-1">Debe ser un dominio verificado en Resend. Si lo dejas vacio, usa el email del sistema.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Resend API Key <span className="text-gray-400 font-normal">(opcional — si no se configura, usa la clave global del sistema)</span></label>
+              <input value={form.emailApiKey} onChange={(e) => set("emailApiKey", e.target.value)}
+                className={inp} placeholder="re_xxxxxxxxxxxx"
+                type="password" />
+              <p className="text-xs text-gray-400 mt-1">Obtener en <a href="https://resend.com/api-keys" target="_blank" rel="noopener" className="text-blue-600">resend.com/api-keys</a></p>
+            </div>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800 space-y-1">
+              <p className="font-medium">Emails automaticos activos:</p>
+              <ul className="list-disc pl-5 text-blue-700 space-y-0.5 text-xs">
+                <li>Confirmacion de cita al crear una cita</li>
+                <li>Recordatorio de cita el dia anterior (cron diario 8am)</li>
+                <li>Bienvenida al crear un usuario</li>
+                <li>Factura/cotizacion al cambiar estado a "Enviado"</li>
+              </ul>
             </div>
           </div>
         )}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { sendEmail, welcomeEmailHtml } from "@/lib/email";
 
 async function checkAuth(session: any, slug: string) {
   const role = session?.user?.role;
@@ -51,6 +52,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     data: { email, name, password: hashed, phone, siteId: site.id },
     select: { id: true, email: true, name: true, phone: true, createdAt: true },
   });
+
+  sendEmail({
+    apiKey: (site as any).emailApiKey,
+    from: (site as any).emailFrom,
+    to: email,
+    subject: `Bienvenido a ${site.name}`,
+    html: welcomeEmailHtml({ clientName: name, businessName: site.name }),
+  }).catch(console.error);
+
   return NextResponse.json(user, { status: 201 });
 }
 

@@ -40,6 +40,7 @@ const MODULE_CONFIG = [
   { key: "ai",           label: "Inteligencia Artificial", desc: "Agentes IA, chat publico y asistente admin", icon: "🤖" },
   { key: "support",      label: "Soporte en Vivo",   desc: "Chat en vivo con clientes y transferencia a agente humano", icon: "💬" },
   { key: "whatsapp",     label: "WhatsApp",          desc: "Soporte y bot de IA directamente en WhatsApp Business", icon: "📱" },
+  { key: "instagram",    label: "Instagram DM",      desc: "Responde mensajes directos de Instagram con IA", icon: "📸" },
 ];
 
 function parseMods(s: string): Record<string, boolean> {

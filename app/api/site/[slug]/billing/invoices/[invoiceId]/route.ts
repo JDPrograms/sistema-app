@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendEmail, invoiceEmailHtml } from "@/lib/email";
 
 function canManage(session: any, slug: string) {
   const role = session?.user?.role;
@@ -15,8 +16,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
   if (!canManage(session, slug)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const body = await req.json();
 
+  const site = await prisma.site.findUnique({ where: { slug }, select: { id: true, name: true, emailApiKey: true, emailFrom: true } });
+  if (!site) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const current = await prisma.siteInvoice.findUnique({ where: { id: invoiceId } });
   const nowPaid = body.status === "paid" && current?.status !== "paid";
+  const nowSent = body.status === "sent" && current?.status !== "sent";
 
   const invoice = await prisma.siteInvoice.update({
     where: { id: invoiceId },
@@ -36,6 +41,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
       paidAt: nowPaid ? new Date() : (body.paidAt ? new Date(body.paidAt) : null),
     },
   });
+
+  if (nowSent && invoice.clientEmail) {
+    sendEmail({
+      apiKey: site.emailApiKey,
+      from: site.emailFrom,
+      to: invoice.clientEmail,
+      subject: `${invoice.type === "quote" ? "Cotización" : "Factura"} ${invoice.number} — ${site.name}`,
+      html: invoiceEmailHtml({
+        clientName: invoice.clientName,
+        invoiceNumber: invoice.number,
+        total: invoice.total,
+        dueDate: invoice.dueDate ? invoice.dueDate.toLocaleDateString("es-DO") : null,
+        businessName: site.name,
+      }),
+    }).catch(console.error);
+  }
+
   return NextResponse.json(invoice);
 }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { chat, buildPublicContext } from "@/lib/ai";
 import { sendWhatsAppText, markAsRead } from "@/lib/whatsapp";
+import { sendPushToSite } from "@/lib/push";
 
 // ── GET: Meta webhook verification ────────────────────────────────
 export async function GET(req: Request) {
@@ -90,6 +91,11 @@ async function handleIncoming(body: any) {
             },
             include: { messages: { orderBy: { createdAt: "asc" } } },
           });
+          sendPushToSite(site.id, {
+            title: "Nuevo mensaje de WhatsApp",
+            body: `${contactName}: ${text.slice(0, 80)}`,
+            url: `/site/${site.slug}/admin/support`,
+          }).catch(console.error);
         }
 
         if (session.status === "resolved") continue;
