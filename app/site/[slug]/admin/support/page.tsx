@@ -65,16 +65,17 @@ export default function SupportPage() {
   const [tab, setTab] = useState<"chats" | "agents" | "queues" | "whatsapp">("chats");
 
   // WhatsApp config state
-  const [waConfig, setWaConfig] = useState({ enabled: false, phoneNumberId: "", displayPhoneNumber: "", hasToken: false, verifyToken: "" });
+  const [waConfig, setWaConfig] = useState({ enabled: false, phoneNumberId: "", displayPhoneNumber: "", hasToken: false, verifyToken: "", webhookAutoConfigured: false });
   const [waLoading, setWaLoading] = useState(false);
   const [waSaving, setWaSaving] = useState(false);
   const [waMsg, setWaMsg] = useState("");
   const [waToken, setWaToken] = useState("");
   const [waDiscovering, setWaDiscovering] = useState(false);
   const [waDiscoverError, setWaDiscoverError] = useState("");
-  const [waPhones, setWaPhones] = useState<{ id: string; displayPhoneNumber: string; verifiedName: string }[]>([]);
-  const [waSelectedPhone, setWaSelectedPhone] = useState<{ id: string; displayPhoneNumber: string; verifiedName: string } | null>(null);
+  const [waPhones, setWaPhones] = useState<{ id: string; displayPhoneNumber: string; verifiedName: string; wabaId: string }[]>([]);
+  const [waSelectedPhone, setWaSelectedPhone] = useState<{ id: string; displayPhoneNumber: string; verifiedName: string; wabaId: string } | null>(null);
   const [waStep, setWaStep] = useState<"idle" | "selecting" | "configured">("idle");
+  const [waAutoResult, setWaAutoResult] = useState<{ wabaSubscribed?: boolean; webhookRegistered?: boolean; errors: string[] } | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
   const [queueFilter, setQueueFilter] = useState<string>("all");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -127,7 +128,7 @@ export default function SupportPage() {
     const res = await fetch(`/api/site/${slug}/support/whatsapp`);
     if (res.ok) {
       const d = await res.json();
-      setWaConfig({ enabled: d.enabled, phoneNumberId: d.phoneNumberId, displayPhoneNumber: d.displayPhoneNumber || "", hasToken: !!d.hasToken, verifyToken: d.verifyToken });
+      setWaConfig({ enabled: d.enabled, phoneNumberId: d.phoneNumberId, displayPhoneNumber: d.displayPhoneNumber || "", hasToken: !!d.hasToken, verifyToken: d.verifyToken, webhookAutoConfigured: !!d.webhookAutoConfigured });
       if (d.phoneNumberId && d.hasToken) setWaStep("configured");
     }
     setWaLoading(false);
@@ -373,15 +374,32 @@ export default function SupportPage() {
                         <p className="text-xs text-green-600">WhatsApp Business conectado · {waConfig.enabled ? "Activo" : "Desactivado"}</p>
                       </div>
                       <button
-                        onClick={() => { setWaStep("idle"); setWaToken(""); setWaPhones([]); setWaSelectedPhone(null); setWaDiscoverError(""); }}
+                        onClick={() => { setWaStep("idle"); setWaToken(""); setWaPhones([]); setWaSelectedPhone(null); setWaDiscoverError(""); setWaAutoResult(null); }}
                         className="ml-auto text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors">
                         Cambiar número
                       </button>
                     </div>
 
+                    {/* Automation result */}
+                    {waAutoResult && (
+                      <div className="space-y-1.5">
+                        <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${waAutoResult.wabaSubscribed ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-500"}`}>
+                          {waAutoResult.wabaSubscribed ? "✅" : "⬜"} WABA suscrito al app
+                        </div>
+                        <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${waAutoResult.webhookRegistered ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                          {waAutoResult.webhookRegistered ? "✅" : "⚠️"} {waAutoResult.webhookRegistered ? "Webhook configurado automáticamente" : "Webhook no auto-configurado (configura META_APP_ID y META_APP_SECRET)"}
+                        </div>
+                        {waAutoResult.errors.length > 0 && (
+                          <div className="text-xs text-red-600 px-3 py-2 bg-red-50 rounded-lg">
+                            {waAutoResult.errors.join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {waConfig.verifyToken && (
                       <div>
-                        <p className="text-xs font-medium text-gray-600 mb-1">Token de verificación (para el webhook de Meta)</p>
+                        <p className="text-xs font-medium text-gray-600 mb-1">Token de verificación del webhook</p>
                         <div className="flex items-center gap-2">
                           <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 break-all">
                             {waConfig.verifyToken}
@@ -480,7 +498,7 @@ export default function SupportPage() {
                       <button
                         onClick={async () => {
                           if (!waSelectedPhone) return;
-                          setWaSaving(true); setWaMsg("");
+                          setWaSaving(true); setWaMsg(""); setWaAutoResult(null);
                           const res = await fetch(`/api/site/${slug}/support/whatsapp`, {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
@@ -488,15 +506,16 @@ export default function SupportPage() {
                               token: waToken,
                               phoneNumberId: waSelectedPhone.id,
                               displayPhoneNumber: waSelectedPhone.displayPhoneNumber,
+                              wabaId: waSelectedPhone.wabaId,
                               enabled: true,
                             }),
                           });
                           setWaSaving(false);
                           if (res.ok) {
+                            const d = await res.json();
+                            setWaAutoResult(d.automation ?? null);
                             setWaToken("");
                             await loadWaConfig();
-                            setWaMsg("✓ WhatsApp conectado correctamente");
-                            setTimeout(() => setWaMsg(""), 4000);
                           } else {
                             setWaMsg("Error al guardar");
                           }
@@ -510,22 +529,34 @@ export default function SupportPage() {
                 )}
               </div>
 
-              {/* Webhook instructions */}
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-sm text-blue-800 space-y-2">
-                <p className="font-semibold">Configuración del webhook en Meta:</p>
-                <ol className="list-decimal pl-5 space-y-1 text-blue-700">
-                  <li>Ve a <strong>Meta for Developers</strong> → Tu App → WhatsApp → Configuration</li>
-                  <li>En <em>Webhook</em>, haz clic en <strong>Edit</strong></li>
-                  <li>URL del callback:
-                    <code className="block bg-blue-100 px-2 py-1 rounded mt-1 text-xs break-all">
-                      {typeof window !== "undefined" ? window.location.origin : "https://tu-dominio.com"}/api/webhooks/whatsapp
-                    </code>
-                  </li>
-                  <li>Verify Token: <strong>el token de verificación que aparece arriba</strong></li>
-                  <li>Suscríbete al campo <strong>messages</strong></li>
-                </ol>
-                <p className="text-blue-600 text-xs">Los mensajes de WhatsApp aparecerán en la pestaña <strong>Conversaciones</strong> con el ícono 📱</p>
-              </div>
+              {/* Webhook instructions — only show if not auto-configured */}
+              {waConfig.webhookAutoConfigured ? (
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-800">
+                  <p className="font-semibold">✅ Webhook completamente automatizado</p>
+                  <p className="text-xs text-green-600 mt-1">
+                    El sistema configura el webhook automáticamente al conectar un número. No necesitas hacer nada en Meta Developer Console.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-sm text-blue-800 space-y-2">
+                  <p className="font-semibold">Configuración manual del webhook en Meta:</p>
+                  <ol className="list-decimal pl-5 space-y-1 text-blue-700">
+                    <li>Ve a <strong>Meta for Developers</strong> → Tu App → WhatsApp → Configuration</li>
+                    <li>En <em>Webhook</em>, haz clic en <strong>Edit</strong></li>
+                    <li>URL del callback:
+                      <code className="block bg-blue-100 px-2 py-1 rounded mt-1 text-xs break-all">
+                        {typeof window !== "undefined" ? window.location.origin : "https://tu-dominio.com"}/api/webhooks/whatsapp
+                      </code>
+                    </li>
+                    <li>Verify Token: <strong>el token que aparece en la sección de arriba</strong></li>
+                    <li>Suscríbete al campo <strong>messages</strong></li>
+                  </ol>
+                  <p className="text-blue-500 text-xs mt-1">
+                    Para automatizar esto, agrega <code className="bg-blue-100 px-1 rounded">META_APP_ID</code> y <code className="bg-blue-100 px-1 rounded">META_APP_SECRET</code> a tus variables de entorno.
+                  </p>
+                  <p className="text-blue-600 text-xs">Los mensajes de WhatsApp aparecerán en la pestaña <strong>Conversaciones</strong> con el ícono 📱</p>
+                </div>
+              )}
             </>
           )}
         </div>

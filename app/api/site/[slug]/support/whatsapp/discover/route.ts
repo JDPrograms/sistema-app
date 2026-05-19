@@ -4,51 +4,51 @@ import { auth } from "@/lib/auth";
 const META_API = "https://graph.facebook.com/v20.0";
 
 async function fetchPhoneNumbers(token: string) {
-  // 1. Get the token owner (System User or User)
   const meRes = await fetch(`${META_API}/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const me = await meRes.json();
   if (me.error || !me.id) throw new Error(me.error?.message || "Token inválido");
 
-  const phones: { id: string; displayPhoneNumber: string; verifiedName: string }[] = [];
+  const phones: { id: string; displayPhoneNumber: string; verifiedName: string; wabaId: string }[] = [];
   const seen = new Set<string>();
 
-  function addPhone(p: { id: string; display_phone_number: string; verified_name: string }) {
+  function addPhone(p: { id: string; display_phone_number: string; verified_name: string }, wabaId: string) {
     if (!seen.has(p.id)) {
       seen.add(p.id);
-      phones.push({ id: p.id, displayPhoneNumber: p.display_phone_number, verifiedName: p.verified_name });
+      phones.push({
+        id: p.id,
+        displayPhoneNumber: p.display_phone_number,
+        verifiedName: p.verified_name,
+        wabaId,
+      });
     }
   }
 
-  // 2. Try: get businesses, then WABAs, then phones
   async function loadFromWABA(wabaId: string) {
     const r = await fetch(
       `${META_API}/${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const d = await r.json();
-    for (const p of d.data || []) addPhone(p);
+    for (const p of d.data || []) addPhone(p, wabaId);
   }
 
-  // Owned WABAs via businesses
   const bizRes = await fetch(`${META_API}/${me.id}/businesses?fields=id`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const biz = await bizRes.json();
 
   for (const b of biz.data || []) {
-    const wabaOwned = await fetch(
-      `${META_API}/${b.id}/owned_whatsapp_business_accounts?fields=id`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    for (const w of (await wabaOwned.json()).data || []) await loadFromWABA(w.id);
+    const owned = await fetch(`${META_API}/${b.id}/owned_whatsapp_business_accounts?fields=id`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    for (const w of (await owned.json()).data || []) await loadFromWABA(w.id);
 
-    const wabaClient = await fetch(
-      `${META_API}/${b.id}/client_whatsapp_business_accounts?fields=id`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    for (const w of (await wabaClient.json()).data || []) await loadFromWABA(w.id);
+    const client = await fetch(`${META_API}/${b.id}/client_whatsapp_business_accounts?fields=id`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    for (const w of (await client.json()).data || []) await loadFromWABA(w.id);
   }
 
   return phones;
@@ -57,7 +57,7 @@ async function fetchPhoneNumbers(token: string) {
 export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
   const role = (session?.user as any)?.role;
-  await params; // consume
+  await params;
   if (!session || (role !== "superadmin" && role !== "siteadmin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

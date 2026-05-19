@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
+import { subscribeWABAToApp, registerWebhook } from "@/lib/whatsapp";
 
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -12,16 +13,23 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
   }
   const site = await prisma.site.findUnique({
     where: { slug },
-    select: { whatsappPhoneNumberId: true, whatsappToken: true, whatsappVerifyToken: true, modules: true },
+    select: {
+      whatsappPhoneNumberId: true,
+      whatsappDisplayPhone: true,
+      whatsappToken: true,
+      whatsappVerifyToken: true,
+      modules: true,
+    },
   });
   if (!site) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const mods = JSON.parse(site.modules || "{}");
   return NextResponse.json({
     enabled: mods.whatsapp === true,
     phoneNumberId: site.whatsappPhoneNumberId ?? "",
-    displayPhoneNumber: (site as any).whatsappDisplayPhone ?? "",
+    displayPhoneNumber: site.whatsappDisplayPhone ?? "",
     hasToken: !!site.whatsappToken,
     verifyToken: site.whatsappVerifyToken ?? "",
+    webhookAutoConfigured: !!(process.env.META_APP_ID && process.env.META_APP_SECRET),
   });
 }
 
@@ -41,15 +49,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
 
   const data: any = {};
   if (body.phoneNumberId !== undefined) data.whatsappPhoneNumberId = body.phoneNumberId || null;
-  if (body.displayPhoneNumber !== undefined) (data as any).whatsappDisplayPhone = body.displayPhoneNumber || null;
+  if (body.displayPhoneNumber !== undefined) data.whatsappDisplayPhone = body.displayPhoneNumber || null;
+  if (body.wabaId !== undefined) data.whatsappWabaId = body.wabaId || null;
   if (body.token !== undefined && body.token.trim()) data.whatsappToken = body.token.trim();
 
   // Auto-generate verify token if not provided and none exists yet
-  if (body.verifyToken !== undefined) {
-    data.whatsappVerifyToken = body.verifyToken || null;
-  } else if (!site.whatsappVerifyToken) {
-    data.whatsappVerifyToken = randomBytes(20).toString("hex");
-  }
+  const verifyToken =
+    body.verifyToken?.trim() ||
+    site.whatsappVerifyToken ||
+    randomBytes(20).toString("hex");
+  data.whatsappVerifyToken = verifyToken;
 
   if (body.enabled !== undefined) {
     const mods = JSON.parse(site.modules || "{}");
@@ -57,6 +66,35 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
     data.modules = JSON.stringify(mods);
   }
 
+  // Save first so verify token is in DB before Meta calls our GET to verify
   await prisma.site.update({ where: { slug }, data });
-  return NextResponse.json({ ok: true });
+
+  // Automation: subscribe WABA + register webhook (fire-and-forget style, errors are reported)
+  const automationResults: { wabaSubscribed?: boolean; webhookRegistered?: boolean; errors: string[] } = {
+    errors: [],
+  };
+
+  const token = body.token?.trim() || "";
+  const wabaId = body.wabaId?.trim() || "";
+
+  if (token && wabaId) {
+    try {
+      await subscribeWABAToApp(wabaId, token);
+      automationResults.wabaSubscribed = true;
+    } catch (e: any) {
+      automationResults.errors.push(`WABA: ${e.message}`);
+    }
+  }
+
+  if (process.env.META_APP_ID && process.env.META_APP_SECRET && process.env.NEXT_PUBLIC_APP_URL) {
+    try {
+      const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/whatsapp`;
+      await registerWebhook(callbackUrl, verifyToken);
+      automationResults.webhookRegistered = true;
+    } catch (e: any) {
+      automationResults.errors.push(`Webhook: ${e.message}`);
+    }
+  }
+
+  return NextResponse.json({ ok: true, automation: automationResults });
 }

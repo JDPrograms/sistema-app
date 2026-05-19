@@ -73,6 +73,7 @@ model Site {
   customDomain          String?  @unique
   whatsappPhoneNumberId String?
   whatsappDisplayPhone  String?
+  whatsappWabaId        String?
   whatsappToken         String?
   whatsappVerifyToken   String?
   socialLinks    String   @default("{}")
