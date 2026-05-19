@@ -78,6 +78,8 @@ export default function SupportPage() {
   const [waAutoResult, setWaAutoResult] = useState<{ wabaSubscribed?: boolean; webhookRegistered?: boolean; errors: string[] } | null>(null);
   const [waAppId, setWaAppId] = useState("");
   const [waAppSecret, setWaAppSecret] = useState("");
+  const [waManualWabaId, setWaManualWabaId] = useState("");
+  const [waShowManual, setWaShowManual] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
   const [queueFilter, setQueueFilter] = useState<string>("all");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -442,25 +444,79 @@ export default function SupportPage() {
                             const res = await fetch(`/api/site/${slug}/support/whatsapp/discover`, {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ token: waToken }),
+                              body: JSON.stringify({ token: waToken, wabaId: waManualWabaId || undefined }),
                             });
                             const d = await res.json();
                             setWaDiscovering(false);
                             if (!res.ok) { setWaDiscoverError(d.error || "Error al conectar con Meta"); return; }
-                            if (!d.phones?.length) { setWaDiscoverError("No se encontraron números asociados a este token."); return; }
+                            if (!d.phones?.length) {
+                              setWaDiscoverError("No se encontraron números. Intenta ingresar el WABA ID manualmente abajo.");
+                              setWaShowManual(true);
+                              return;
+                            }
                             setWaPhones(d.phones);
                             setWaSelectedPhone(d.phones.length === 1 ? d.phones[0] : null);
                             setWaStep("selecting");
                           }}
                           disabled={waDiscovering || !waToken.trim()}
                           className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap">
-                          {waDiscovering ? "Buscando..." : "Descubrir números →"}
+                          {waDiscovering ? "Buscando..." : "Descubrir →"}
                         </button>
                       </div>
-                      {waDiscoverError && <p className="text-xs text-red-600 mt-1">{waDiscoverError}</p>}
+                      {waDiscoverError && (
+                        <p className="text-xs text-red-600 mt-1">{waDiscoverError}</p>
+                      )}
                       <p className="text-xs text-gray-400 mt-1">
                         Meta for Developers → Tu App → WhatsApp → API Setup → System User Token
                       </p>
+
+                      {/* Manual WABA ID fallback */}
+                      {waShowManual && (
+                        <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                          <p className="text-xs font-semibold text-amber-800">Ingresa el WABA ID manualmente</p>
+                          <p className="text-xs text-amber-700">
+                            Encuéntralo en: Meta Business Suite → Configuración → Cuentas de WhatsApp → ID de cuenta
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              value={waManualWabaId}
+                              onChange={(e) => setWaManualWabaId(e.target.value)}
+                              placeholder="123456789012345"
+                              className="flex-1 border border-amber-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            />
+                            <button
+                              onClick={async () => {
+                                if (!waToken.trim() || !waManualWabaId.trim()) return;
+                                setWaDiscovering(true); setWaDiscoverError("");
+                                const res = await fetch(`/api/site/${slug}/support/whatsapp/discover`, {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ token: waToken, wabaId: waManualWabaId }),
+                                });
+                                const d = await res.json();
+                                setWaDiscovering(false);
+                                if (!res.ok || !d.phones?.length) {
+                                  setWaDiscoverError(d.error || "No se encontraron números para ese WABA ID.");
+                                  return;
+                                }
+                                setWaPhones(d.phones);
+                                setWaSelectedPhone(d.phones.length === 1 ? d.phones[0] : null);
+                                setWaStep("selecting");
+                              }}
+                              disabled={waDiscovering || !waManualWabaId.trim()}
+                              className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+                              {waDiscovering ? "..." : "Buscar"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {!waShowManual && (
+                        <button onClick={() => setWaShowManual(true)}
+                          className="text-xs text-gray-400 hover:text-gray-600 mt-1 underline">
+                          ¿No aparecen tus números? Ingresa el WABA ID manualmente
+                        </button>
+                      )}
                     </div>
 
                     {/* App ID + Secret for full automation */}
