@@ -83,6 +83,10 @@ model Site {
   instagramVerifyToken  String?
   emailFrom             String?
   emailApiKey           String?
+  pwaEnabled            Boolean  @default(false)
+  pwaShortName          String?
+  twaPackageName        String?
+  twaFingerprint        String?
   socialLinks    String   @default("{}")
   businessHours  String   @default("[]")
   seoTitle       String?

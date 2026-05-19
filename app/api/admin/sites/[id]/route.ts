@@ -33,6 +33,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ...(body.planType !== undefined && { planType: body.planType }),
       ...(body.expiresAt !== undefined && { expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }),
       ...(body.expiryReason !== undefined && { expiryReason: body.expiryReason }),
+      ...(body.pwaEnabled !== undefined && { pwaEnabled: body.pwaEnabled }),
+      ...(body.pwaShortName !== undefined && { pwaShortName: body.pwaShortName }),
+      ...(body.twaPackageName !== undefined && { twaPackageName: body.twaPackageName }),
+      ...(body.twaFingerprint !== undefined && { twaFingerprint: body.twaFingerprint }),
     },
   });
   return NextResponse.json(site);
