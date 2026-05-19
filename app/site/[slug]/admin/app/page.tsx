@@ -54,14 +54,21 @@ export default function AdminAppPage() {
         <p className="text-gray-400 text-sm mt-1">Configura la app instalable de tu sitio</p>
       </div>
 
-      {/* Status */}
+      {/* Status + test link */}
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
         <span className="text-green-600 text-lg mt-0.5">✓</span>
-        <div>
+        <div className="flex-1">
           <p className="text-sm font-medium text-green-800">PWA activa</p>
           <p className="text-xs text-green-600 mt-0.5">
-            Los visitantes que usen Chrome o Edge verán automáticamente un botón para instalar tu sitio como app.
+            Los visitantes ven automáticamente una barra de instalación al entrar al sitio público.
           </p>
+          <a
+            href={`/site/${slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block mt-2 text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 font-medium transition-colors">
+            Ver sitio público y probar instalación ↗
+          </a>
         </div>
       </div>
 
