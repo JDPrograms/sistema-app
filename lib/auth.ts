@@ -116,6 +116,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null;
         const valid = await bcrypt.compare(credentials.password as string, user.password);
         if (!valid) return null;
+        if (!user.emailVerified) return null; // blocked until verified
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: "siteuser",
+          siteId: site.id,
+          siteSlug: site.slug,
+        };
+      },
+    }),
+    Credentials({
+      id: "google-siteuser",
+      name: "Google Site User",
+      credentials: {
+        token: { label: "Token", type: "text" },
+        siteSlug: { label: "Site", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.token || !credentials?.siteSlug) return null;
+        const site = await prisma.site.findUnique({ where: { slug: credentials.siteSlug as string } });
+        if (!site) return null;
+        const user = await prisma.siteUser.findFirst({
+          where: {
+            googleLoginToken: credentials.token as string,
+            siteId: site.id,
+            googleLoginExpires: { gt: new Date() },
+          },
+        });
+        if (!user) return null;
+        // Consume the one-time token
+        await prisma.siteUser.update({
+          where: { id: user.id },
+          data: { googleLoginToken: null, googleLoginExpires: null },
+        });
         return {
           id: user.id,
           email: user.email,

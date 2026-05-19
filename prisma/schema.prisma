@@ -141,17 +141,25 @@ model SiteAdmin {
 }
 
 model SiteUser {
-  id        String   @id @default(cuid())
-  email     String
-  password  String
-  name      String
-  phone     String?
-  siteId    String
-  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  email              String
+  password           String
+  name               String
+  phone              String?
+  siteId             String
+  site               Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  emailVerified      Boolean   @default(false)
+  verifyToken        String?
+  provider           String    @default("email") // "email" | "google"
+  googleId           String?
+  googleLoginToken   String?
+  googleLoginExpires DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@unique([email, siteId])
+  @@index([verifyToken])
+  @@index([googleLoginToken])
 }
 
 model SitePage {
