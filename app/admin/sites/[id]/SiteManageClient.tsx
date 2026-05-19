@@ -10,6 +10,7 @@ interface Site {
   isActive: boolean; hasAdminPanel: boolean; modules: string;
   primaryColor: string; description?: string;
   planType: string; expiresAt?: string | null; expiryReason?: string | null;
+  customDomain?: string | null;
   admins: Admin[]; _count: { users: number };
 }
 
@@ -61,6 +62,11 @@ export default function SiteManageClient({ site }: { site: Site }) {
   const [planType, setPlanType] = useState(site.planType ?? "unlimited");
   const [expiresAt, setExpiresAt] = useState(site.expiresAt ? new Date(site.expiresAt).toISOString().split("T")[0] : "");
   const [expiryReason, setExpiryReason] = useState(site.expiryReason ?? "");
+  const [customDomain, setCustomDomain] = useState(site.customDomain ?? "");
+  const [domainInput, setDomainInput] = useState(site.customDomain ?? "");
+  const [domainStatus, setDomainStatus] = useState<{ verified?: boolean; misconfigured?: boolean } | null>(null);
+  const [savingDomain, setSavingDomain] = useState(false);
+  const [domainMsg, setDomainMsg] = useState("");
 
   async function handleSave() {
     setSaving(true);
@@ -110,6 +116,38 @@ export default function SiteManageClient({ site }: { site: Site }) {
     setSavingPlan(false);
     if (res.ok) { setPlanMsg("Plan guardado"); setTimeout(() => setPlanMsg(""), 2000); }
     else setPlanMsg("Error al guardar");
+  }
+
+  async function handleSaveDomain() {
+    setSavingDomain(true);
+    setDomainMsg("");
+    const res = await fetch(`/api/admin/sites/${site.id}/domain`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ domain: domainInput }),
+    });
+    setSavingDomain(false);
+    const d = await res.json();
+    if (res.ok) {
+      setCustomDomain(d.domain);
+      setDomainMsg(d.vercelOk ? "Dominio asignado. Configura el DNS." : `Dominio guardado (${d.vercelMsg || "configura Vercel manualmente"}).`);
+      const statusRes = await fetch(`/api/admin/sites/${site.id}/domain`);
+      if (statusRes.ok) { const sd = await statusRes.json(); setDomainStatus(sd.status); }
+    } else {
+      setDomainMsg(d.error || "Error al guardar");
+    }
+  }
+
+  async function handleRemoveDomain() {
+    if (!confirm("¿Quitar el dominio personalizado de este sitio?")) return;
+    setSavingDomain(true);
+    await fetch(`/api/admin/sites/${site.id}/domain`, { method: "DELETE" });
+    setCustomDomain("");
+    setDomainInput("");
+    setDomainStatus(null);
+    setDomainMsg("Dominio eliminado");
+    setSavingDomain(false);
+    setTimeout(() => setDomainMsg(""), 3000);
   }
 
   function toggleMod(key: string) {
@@ -273,6 +311,74 @@ export default function SiteManageClient({ site }: { site: Site }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Dominio personalizado */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-gray-900">Dominio personalizado</h2>
+          <p className="text-sm text-gray-400 mt-0.5">Asigna un dominio propio. Los clientes accederán directamente desde ese dominio.</p>
+        </div>
+
+        {customDomain && (
+          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+            <span className="text-green-600 text-lg">✓</span>
+            <code className="text-sm font-mono text-green-800">{customDomain}</code>
+            <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+              domainStatus?.verified ? "bg-green-100 text-green-700" :
+              domainStatus?.misconfigured ? "bg-red-100 text-red-700" :
+              "bg-amber-100 text-amber-700"
+            }`}>
+              {domainStatus?.verified ? "✓ Verificado" : domainStatus?.misconfigured ? "DNS incorrecto" : "Pendiente DNS"}
+            </span>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <input
+            value={domainInput}
+            onChange={(e) => setDomainInput(e.target.value)}
+            placeholder="ejemplo.com"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+          />
+          <button
+            onClick={handleSaveDomain}
+            disabled={savingDomain || !domainInput.trim()}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+            {savingDomain ? "Guardando..." : customDomain ? "Actualizar" : "Asignar dominio"}
+          </button>
+          {customDomain && (
+            <button
+              onClick={handleRemoveDomain}
+              disabled={savingDomain}
+              className="px-3 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+              Quitar
+            </button>
+          )}
+        </div>
+
+        {domainMsg && (
+          <p className={`text-sm ${domainMsg.includes("Error") || domainMsg.includes("error") ? "text-red-600" : "text-green-600"}`}>
+            {domainMsg}
+          </p>
+        )}
+
+        {customDomain && (
+          <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm border border-gray-100">
+            <p className="font-medium text-gray-700">Configura estos registros DNS en tu proveedor de dominio:</p>
+            <div className="font-mono text-xs bg-white border border-gray-200 rounded-lg p-3 space-y-1">
+              <div className="grid grid-cols-3 gap-2 text-gray-400 font-sans text-xs font-semibold uppercase mb-1">
+                <span>Tipo</span><span>Nombre</span><span>Valor</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <span className="text-blue-600">CNAME</span>
+                <span>@</span>
+                <span className="text-gray-700">cname.vercel-dns.com</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400">Los cambios DNS pueden tardar hasta 48 horas. Vercel verificará automáticamente.</p>
+          </div>
+        )}
       </div>
 
       {/* Info */}

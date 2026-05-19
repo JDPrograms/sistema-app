@@ -65,10 +65,16 @@ export default function SupportPage() {
   const [tab, setTab] = useState<"chats" | "agents" | "queues" | "whatsapp">("chats");
 
   // WhatsApp config state
-  const [waConfig, setWaConfig] = useState({ enabled: false, phoneNumberId: "", token: "", verifyToken: "" });
+  const [waConfig, setWaConfig] = useState({ enabled: false, phoneNumberId: "", displayPhoneNumber: "", hasToken: false, verifyToken: "" });
   const [waLoading, setWaLoading] = useState(false);
   const [waSaving, setWaSaving] = useState(false);
   const [waMsg, setWaMsg] = useState("");
+  const [waToken, setWaToken] = useState("");
+  const [waDiscovering, setWaDiscovering] = useState(false);
+  const [waDiscoverError, setWaDiscoverError] = useState("");
+  const [waPhones, setWaPhones] = useState<{ id: string; displayPhoneNumber: string; verifiedName: string }[]>([]);
+  const [waSelectedPhone, setWaSelectedPhone] = useState<{ id: string; displayPhoneNumber: string; verifiedName: string } | null>(null);
+  const [waStep, setWaStep] = useState<"idle" | "selecting" | "configured">("idle");
   const [statusFilter, setStatusFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
   const [queueFilter, setQueueFilter] = useState<string>("all");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -121,7 +127,8 @@ export default function SupportPage() {
     const res = await fetch(`/api/site/${slug}/support/whatsapp`);
     if (res.ok) {
       const d = await res.json();
-      setWaConfig({ enabled: d.enabled, phoneNumberId: d.phoneNumberId, token: "", verifyToken: d.verifyToken });
+      setWaConfig({ enabled: d.enabled, phoneNumberId: d.phoneNumberId, displayPhoneNumber: d.displayPhoneNumber || "", hasToken: !!d.hasToken, verifyToken: d.verifyToken });
+      if (d.phoneNumberId && d.hasToken) setWaStep("configured");
     }
     setWaLoading(false);
   }, [slug]);
@@ -331,14 +338,13 @@ export default function SupportPage() {
             <p className="text-gray-400 text-sm">Cargando configuración...</p>
           ) : (
             <>
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+                <div className="flex items-center justify-between">
                   <div>
                     <h2 className="font-bold text-gray-900">WhatsApp Business</h2>
-                    <p className="text-sm text-gray-400 mt-0.5">Conecta un número de WhatsApp Business para recibir y responder mensajes con IA</p>
+                    <p className="text-sm text-gray-400 mt-0.5">Conecta tu número de WhatsApp Business para recibir y responder mensajes con IA</p>
                   </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-sm text-gray-600">{waConfig.enabled ? "Activo" : "Inactivo"}</span>
+                  {waStep === "configured" && (
                     <div
                       onClick={async () => {
                         const next = !waConfig.enabled;
@@ -349,66 +355,176 @@ export default function SupportPage() {
                           body: JSON.stringify({ enabled: next }),
                         });
                       }}
-                      className={`w-11 h-6 rounded-full transition-colors cursor-pointer relative ${waConfig.enabled ? "bg-green-500" : "bg-gray-300"}`}>
+                      className={`w-11 h-6 rounded-full transition-colors cursor-pointer relative flex-shrink-0 ${waConfig.enabled ? "bg-green-500" : "bg-gray-300"}`}>
                       <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${waConfig.enabled ? "left-5" : "left-0.5"}`} />
                     </div>
-                  </label>
+                  )}
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Phone Number ID</label>
-                    <input value={waConfig.phoneNumberId} onChange={(e) => setWaConfig((p) => ({ ...p, phoneNumberId: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="123456789012345" />
-                    <p className="text-xs text-gray-400 mt-1">Encuéntralo en Meta Developer Console → Tu App → WhatsApp → API Setup</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Access Token {waConfig.phoneNumberId ? "(ya guardado — deja en blanco para no cambiar)" : ""}
-                    </label>
-                    <input type="password" value={waConfig.token} onChange={(e) => setWaConfig((p) => ({ ...p, token: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="EAAxxxxxxxxxx..." />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Verify Token (lo defines tú)</label>
-                    <input value={waConfig.verifyToken} onChange={(e) => setWaConfig((p) => ({ ...p, verifyToken: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="mi_token_secreto_123" />
-                    <p className="text-xs text-gray-400 mt-1">Escribe cualquier texto. Debes poner el mismo valor en el webhook de Meta.</p>
-                  </div>
+                {/* ── CONFIGURED STATE ── */}
+                {waStep === "configured" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <span className="text-2xl">✅</span>
+                      <div>
+                        <p className="text-sm font-semibold text-green-800">
+                          {waConfig.displayPhoneNumber || "Número conectado"}
+                        </p>
+                        <p className="text-xs text-green-600">WhatsApp Business conectado · {waConfig.enabled ? "Activo" : "Desactivado"}</p>
+                      </div>
+                      <button
+                        onClick={() => { setWaStep("idle"); setWaToken(""); setWaPhones([]); setWaSelectedPhone(null); setWaDiscoverError(""); }}
+                        className="ml-auto text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors">
+                        Cambiar número
+                      </button>
+                    </div>
 
-                  {waMsg && <p className="text-sm text-green-600 font-medium">{waMsg}</p>}
+                    {waConfig.verifyToken && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 mb-1">Token de verificación (para el webhook de Meta)</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 break-all">
+                            {waConfig.verifyToken}
+                          </code>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(waConfig.verifyToken).then(() => setWaMsg("✓ Copiado")).catch(() => {})}
+                            className="text-xs px-3 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors whitespace-nowrap">
+                            Copiar
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
-                  <button
-                    onClick={async () => {
-                      setWaSaving(true); setWaMsg("");
-                      const res = await fetch(`/api/site/${slug}/support/whatsapp`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ phoneNumberId: waConfig.phoneNumberId, token: waConfig.token || undefined, verifyToken: waConfig.verifyToken }),
-                      });
-                      setWaSaving(false);
-                      if (res.ok) { setWaMsg("✓ Guardado"); setWaConfig((p) => ({ ...p, token: "" })); setTimeout(() => setWaMsg(""), 3000); }
-                    }}
-                    disabled={waSaving}
-                    className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
-                    {waSaving ? "Guardando..." : "Guardar configuración"}
-                  </button>
-                </div>
+                    {waMsg && <p className="text-sm text-green-600 font-medium">{waMsg}</p>}
+                  </div>
+                )}
+
+                {/* ── IDLE: Enter token ── */}
+                {waStep === "idle" && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Access Token de Meta (token permanente de sistema)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={waToken}
+                          onChange={(e) => { setWaToken(e.target.value); setWaDiscoverError(""); }}
+                          placeholder="EAAxxxxxxxxxx..."
+                          className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!waToken.trim()) return;
+                            setWaDiscovering(true); setWaDiscoverError("");
+                            const res = await fetch(`/api/site/${slug}/support/whatsapp/discover`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ token: waToken }),
+                            });
+                            const d = await res.json();
+                            setWaDiscovering(false);
+                            if (!res.ok) { setWaDiscoverError(d.error || "Error al conectar con Meta"); return; }
+                            if (!d.phones?.length) { setWaDiscoverError("No se encontraron números de WhatsApp Business asociados a este token."); return; }
+                            setWaPhones(d.phones);
+                            setWaSelectedPhone(d.phones.length === 1 ? d.phones[0] : null);
+                            setWaStep("selecting");
+                          }}
+                          disabled={waDiscovering || !waToken.trim()}
+                          className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+                          {waDiscovering ? "Buscando..." : "Descubrir números →"}
+                        </button>
+                      </div>
+                      {waDiscoverError && <p className="text-xs text-red-600 mt-1">{waDiscoverError}</p>}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Obtén el token en <strong>Meta for Developers</strong> → Tu App → WhatsApp → API Setup → System User Token
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── SELECTING: Choose phone ── */}
+                {waStep === "selecting" && (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-2">Selecciona el número a conectar:</p>
+                      <div className="space-y-2">
+                        {waPhones.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => setWaSelectedPhone(p)}
+                            className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-colors ${
+                              waSelectedPhone?.id === p.id
+                                ? "border-green-500 bg-green-50"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}>
+                            <span className="text-xl">📱</span>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{p.displayPhoneNumber}</p>
+                              {p.verifiedName && <p className="text-xs text-gray-500">{p.verifiedName}</p>}
+                            </div>
+                            {waSelectedPhone?.id === p.id && <span className="ml-auto text-green-600 font-bold">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {waMsg && <p className={`text-sm font-medium ${waMsg.includes("Error") ? "text-red-600" : "text-green-600"}`}>{waMsg}</p>}
+
+                    <div className="flex gap-2">
+                      <button onClick={() => { setWaStep("idle"); setWaPhones([]); setWaSelectedPhone(null); }}
+                        className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                        Atrás
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!waSelectedPhone) return;
+                          setWaSaving(true); setWaMsg("");
+                          const res = await fetch(`/api/site/${slug}/support/whatsapp`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              token: waToken,
+                              phoneNumberId: waSelectedPhone.id,
+                              displayPhoneNumber: waSelectedPhone.displayPhoneNumber,
+                              enabled: true,
+                            }),
+                          });
+                          setWaSaving(false);
+                          if (res.ok) {
+                            setWaToken("");
+                            await loadWaConfig();
+                            setWaMsg("✓ WhatsApp conectado correctamente");
+                            setTimeout(() => setWaMsg(""), 4000);
+                          } else {
+                            setWaMsg("Error al guardar");
+                          }
+                        }}
+                        disabled={waSaving || !waSelectedPhone}
+                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
+                        {waSaving ? "Conectando..." : "Conectar WhatsApp"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Webhook instructions */}
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-sm text-blue-800 space-y-2">
-                <p className="font-semibold">Cómo configurar el webhook en Meta:</p>
+                <p className="font-semibold">Configuración del webhook en Meta:</p>
                 <ol className="list-decimal pl-5 space-y-1 text-blue-700">
                   <li>Ve a <strong>Meta for Developers</strong> → Tu App → WhatsApp → Configuration</li>
                   <li>En <em>Webhook</em>, haz clic en <strong>Edit</strong></li>
-                  <li>URL del callback: <code className="bg-blue-100 px-1 rounded">{typeof window !== "undefined" ? window.location.origin : "https://tu-dominio.com"}/api/webhooks/whatsapp</code></li>
-                  <li>Verify Token: el mismo valor que pusiste arriba</li>
+                  <li>URL del callback:
+                    <code className="block bg-blue-100 px-2 py-1 rounded mt-1 text-xs break-all">
+                      {typeof window !== "undefined" ? window.location.origin : "https://tu-dominio.com"}/api/webhooks/whatsapp
+                    </code>
+                  </li>
+                  <li>Verify Token: <strong>el token de verificación que aparece arriba</strong></li>
                   <li>Suscríbete al campo <strong>messages</strong></li>
                 </ol>
-                <p className="text-blue-600">Los mensajes de WhatsApp aparecerán en la pestaña <strong>Conversaciones</strong> con el ícono 📱</p>
+                <p className="text-blue-600 text-xs">Los mensajes de WhatsApp aparecerán en la pestaña <strong>Conversaciones</strong> con el ícono 📱</p>
               </div>
             </>
           )}

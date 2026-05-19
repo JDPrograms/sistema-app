@@ -70,7 +70,9 @@ model Site {
   expiryReason   String?
   whatsapp              String?
   mapUrl                String?
+  customDomain          String?  @unique
   whatsappPhoneNumberId String?
+  whatsappDisplayPhone  String?
   whatsappToken         String?
   whatsappVerifyToken   String?
   socialLinks    String   @default("{}")

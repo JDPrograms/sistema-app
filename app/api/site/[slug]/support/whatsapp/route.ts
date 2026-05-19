@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { randomBytes } from "crypto";
 
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
@@ -18,6 +19,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
   return NextResponse.json({
     enabled: mods.whatsapp === true,
     phoneNumberId: site.whatsappPhoneNumberId ?? "",
+    displayPhoneNumber: (site as any).whatsappDisplayPhone ?? "",
     hasToken: !!site.whatsappToken,
     verifyToken: site.whatsappVerifyToken ?? "",
   });
@@ -31,13 +33,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const body = await req.json();
-  const site = await prisma.site.findUnique({ where: { slug }, select: { id: true, modules: true } });
+  const site = await prisma.site.findUnique({
+    where: { slug },
+    select: { id: true, modules: true, whatsappVerifyToken: true },
+  });
   if (!site) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const data: any = {};
   if (body.phoneNumberId !== undefined) data.whatsappPhoneNumberId = body.phoneNumberId || null;
+  if (body.displayPhoneNumber !== undefined) (data as any).whatsappDisplayPhone = body.displayPhoneNumber || null;
   if (body.token !== undefined && body.token.trim()) data.whatsappToken = body.token.trim();
-  if (body.verifyToken !== undefined) data.whatsappVerifyToken = body.verifyToken || null;
+
+  // Auto-generate verify token if not provided and none exists yet
+  if (body.verifyToken !== undefined) {
+    data.whatsappVerifyToken = body.verifyToken || null;
+  } else if (!site.whatsappVerifyToken) {
+    data.whatsappVerifyToken = randomBytes(20).toString("hex");
+  }
 
   if (body.enabled !== undefined) {
     const mods = JSON.parse(site.modules || "{}");
