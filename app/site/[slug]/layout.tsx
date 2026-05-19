@@ -4,6 +4,10 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
+function parseMods(s: string): Record<string, boolean> {
+  try { return JSON.parse(s); } catch { return {}; }
+}
+
 const getSite = cache(async (slug: string) => {
   return prisma.site.findUnique({ where: { slug } });
 });
@@ -11,7 +15,8 @@ const getSite = cache(async (slug: string) => {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const site = await getSite(slug);
-  if (!site?.pwaEnabled) return {};
+  const mods = parseMods(site?.modules ?? "{}");
+  if (!site || mods.pwa !== true) return {};
 
   return {
     manifest: `/site/${slug}/manifest.json`,
@@ -37,10 +42,11 @@ export default async function SiteLayout({
   const { slug } = await params;
   const site = await getSite(slug);
   if (!site || !site.isActive) notFound();
+  const mods = parseMods(site.modules ?? "{}");
   return (
     <>
       {children}
-      {site.pwaEnabled && <PwaInstallPrompt siteName={site.pwaShortName || site.name} />}
+      {mods.pwa === true && <PwaInstallPrompt siteName={site.pwaShortName || site.name} />}
     </>
   );
 }

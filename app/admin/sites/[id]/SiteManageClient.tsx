@@ -43,6 +43,7 @@ const MODULE_CONFIG = [
   { key: "support",      label: "Soporte en Vivo",   desc: "Chat en vivo con clientes y transferencia a agente humano", icon: "💬" },
   { key: "whatsapp",     label: "WhatsApp",          desc: "Soporte y bot de IA directamente en WhatsApp Business", icon: "📱" },
   { key: "instagram",    label: "Instagram DM",      desc: "Responde mensajes directos de Instagram con IA", icon: "📸" },
+  { key: "pwa",         label: "App Android / PWA", desc: "Permite instalar el sitio como app y subirlo a Play Store", icon: "📲" },
 ];
 
 function parseMods(s: string): Record<string, boolean> {
@@ -498,99 +499,52 @@ export default function SiteManageClient({ site }: { site: Site }) {
         </div>
       </div>
 
-      {/* PWA / App instalable */}
+      {/* PWA / TWA — superadmin override config */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-gray-900">App instalable (PWA)</h2>
-            <p className="text-sm text-gray-400 mt-0.5">Permite a los clientes instalar el sitio como una app en su dispositivo</p>
-          </div>
-          <button
-            onClick={() => setPwaEnabled((p) => !p)}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${pwaEnabled ? "bg-blue-600" : "bg-gray-200"}`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${pwaEnabled ? "translate-x-6" : "translate-x-1"}`} />
-          </button>
+        <div>
+          <h2 className="font-semibold text-gray-900">App Android / TWA (config avanzada)</h2>
+          <p className="text-sm text-gray-400 mt-0.5">El modulo "App Android / PWA" se activa en la seccion de modulos. Aqui configura los datos de Play Store.</p>
         </div>
 
-        {pwaEnabled && (
-          <div className="space-y-3 pt-1 border-t border-gray-100">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre corto de la app</label>
-              <input
-                value={pwaShortName}
-                onChange={(e) => setPwaShortName(e.target.value)}
-                placeholder={`${site.name.substring(0, 12)}`}
-                maxLength={12}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-400 mt-1">Aparece debajo del icono en la pantalla de inicio (máx. 12 caracteres)</p>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-              <p className="text-sm font-medium text-blue-900 mb-1">URL del manifest</p>
-              <code className="text-xs text-blue-700 bg-white border border-blue-200 rounded px-2 py-1 block">
-                /site/{site.slug}/manifest.json
-              </code>
-              <p className="text-xs text-blue-600 mt-2">Los clientes que visiten el sitio desde Chrome/Edge verán el botón "Instalar" automáticamente.</p>
-            </div>
-
-            {/* TWA / Play Store */}
-            <div className="border-t border-gray-100 pt-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-700">Configuracion para Play Store (TWA)</p>
-                <button
-                  onClick={() => setPwaGuideOpen((p) => !p)}
-                  className="text-xs text-blue-600 hover:underline">
-                  {pwaGuideOpen ? "Ocultar guía" : "Ver guía"}
-                </button>
-              </div>
-
-              {pwaGuideOpen && (
-                <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-700 space-y-2 border border-gray-200">
-                  <p className="font-semibold text-gray-900">Como subir al Play Store gratis:</p>
-                  <ol className="space-y-1.5 list-decimal list-inside">
-                    <li>Activa la PWA y guarda la configuracion.</li>
-                    <li>Ve a <span className="font-mono bg-white px-1 rounded border">pwabuilder.com</span> y pega la URL del sitio: <span className="font-mono bg-white px-1 rounded border">/site/{site.slug}</span></li>
-                    <li>PWABuilder generará un APK/AAB firmado de forma gratuita.</li>
-                    <li>Descarga el paquete y toma nota del <strong>Package Name</strong> (ej: <span className="font-mono">com.fastsystem.{site.slug}</span>) y el <strong>SHA-256 fingerprint</strong> del certificado.</li>
-                    <li>Ingresa esos valores en los campos de abajo y guarda.</li>
-                    <li>Sube el AAB a <span className="font-mono bg-white px-1 rounded border">play.google.com/console</span> como nueva app.</li>
-                  </ol>
-                  <p className="text-gray-500 mt-1">El fingerprint permite que la app de Play Store abra el sitio sin barra del navegador (experiencia nativa).</p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Package Name (Android)</label>
-                <input
-                  value={twaPackageName}
-                  onChange={(e) => setTwaPackageName(e.target.value)}
-                  placeholder={`com.fastsystem.${site.slug}`}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SHA-256 Fingerprint</label>
-                <input
-                  value={twaFingerprint}
-                  onChange={(e) => setTwaFingerprint(e.target.value)}
-                  placeholder="AA:BB:CC:..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Ruta assetlinks: <span className="font-mono">/.well-known/assetlinks.json?slug={site.slug}</span>
-                </p>
-              </div>
-            </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre corto de la app</label>
+            <input
+              value={pwaShortName}
+              onChange={(e) => setPwaShortName(e.target.value)}
+              placeholder={site.name.substring(0, 12)}
+              maxLength={12}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-        )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Package Name (Android)</label>
+            <input
+              value={twaPackageName}
+              onChange={(e) => setTwaPackageName(e.target.value)}
+              placeholder={`com.fastsystem.${site.slug}`}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">SHA-256 Fingerprint</label>
+            <input
+              value={twaFingerprint}
+              onChange={(e) => setTwaFingerprint(e.target.value)}
+              placeholder="AA:BB:CC:..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              AssetLinks: <span className="font-mono">/.well-known/assetlinks.json?slug={site.slug}</span>
+            </p>
+          </div>
+        </div>
 
         <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
           {pwaMsg && <span className={`text-sm ${pwaMsg.includes("Error") ? "text-red-600" : "text-green-600"}`}>{pwaMsg}</span>}
           <button onClick={handleSavePwa} disabled={savingPwa}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors">
-            {savingPwa ? "Guardando..." : "Guardar PWA"}
+            {savingPwa ? "Guardando..." : "Guardar"}
           </button>
         </div>
       </div>

@@ -101,6 +101,7 @@ export default async function SiteAdminLayout({
     ...(show("users")        ? [{ href: `/site/${slug}/admin/users`, label: "Usuarios" }] : []),
     ...(show("ai")           ? [{ href: `/site/${slug}/admin/ai`, label: "IA" }] : []),
     ...(show("support")      ? [{ href: `/site/${slug}/admin/support`, label: "Soporte 💬" }] : []),
+    ...(show("pwa")          ? [{ href: `/site/${slug}/admin/app`, label: "App Android 📲" }] : []),
     { href: `/site/${slug}/admin/admins`, label: "Administradores" },
   ];
 

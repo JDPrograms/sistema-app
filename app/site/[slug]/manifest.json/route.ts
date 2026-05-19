@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+function parseMods(s: string): Record<string, boolean> {
+  try { return JSON.parse(s); } catch { return {}; }
+}
+
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const site = await prisma.site.findUnique({
     where: { slug },
-    select: { name: true, pwaEnabled: true, pwaShortName: true, description: true, primaryColor: true, logoUrl: true },
+    select: { name: true, modules: true, pwaShortName: true, description: true, primaryColor: true, logoUrl: true },
   });
 
-  if (!site || !site.pwaEnabled) {
+  const mods = parseMods(site?.modules ?? "{}");
+  if (!site || mods.pwa !== true) {
     return NextResponse.json({ error: "PWA no disponible" }, { status: 404 });
   }
 
