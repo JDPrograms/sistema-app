@@ -10,10 +10,13 @@ export async function subscribeWABAToApp(wabaId: string, token: string) {
   return data;
 }
 
-export async function registerWebhook(callbackUrl: string, verifyToken: string) {
-  const appId = process.env.META_APP_ID;
-  const appSecret = process.env.META_APP_SECRET;
-  if (!appId || !appSecret) throw new Error("META_APP_ID o META_APP_SECRET no configurados");
+export async function registerWebhook(
+  appId: string,
+  appSecret: string,
+  callbackUrl: string,
+  verifyToken: string,
+) {
+  if (!appId || !appSecret) throw new Error("App ID o App Secret no configurados");
 
   const appToken = `${appId}|${appSecret}`;
   const body = new URLSearchParams({

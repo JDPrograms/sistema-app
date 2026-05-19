@@ -65,7 +65,7 @@ export default function SupportPage() {
   const [tab, setTab] = useState<"chats" | "agents" | "queues" | "whatsapp">("chats");
 
   // WhatsApp config state
-  const [waConfig, setWaConfig] = useState({ enabled: false, phoneNumberId: "", displayPhoneNumber: "", hasToken: false, verifyToken: "", webhookAutoConfigured: false });
+  const [waConfig, setWaConfig] = useState({ enabled: false, phoneNumberId: "", displayPhoneNumber: "", hasToken: false, verifyToken: "", appId: "", hasAppSecret: false, webhookAutoConfigured: false });
   const [waLoading, setWaLoading] = useState(false);
   const [waSaving, setWaSaving] = useState(false);
   const [waMsg, setWaMsg] = useState("");
@@ -76,6 +76,8 @@ export default function SupportPage() {
   const [waSelectedPhone, setWaSelectedPhone] = useState<{ id: string; displayPhoneNumber: string; verifiedName: string; wabaId: string } | null>(null);
   const [waStep, setWaStep] = useState<"idle" | "selecting" | "configured">("idle");
   const [waAutoResult, setWaAutoResult] = useState<{ wabaSubscribed?: boolean; webhookRegistered?: boolean; errors: string[] } | null>(null);
+  const [waAppId, setWaAppId] = useState("");
+  const [waAppSecret, setWaAppSecret] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
   const [queueFilter, setQueueFilter] = useState<string>("all");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -128,7 +130,8 @@ export default function SupportPage() {
     const res = await fetch(`/api/site/${slug}/support/whatsapp`);
     if (res.ok) {
       const d = await res.json();
-      setWaConfig({ enabled: d.enabled, phoneNumberId: d.phoneNumberId, displayPhoneNumber: d.displayPhoneNumber || "", hasToken: !!d.hasToken, verifyToken: d.verifyToken, webhookAutoConfigured: !!d.webhookAutoConfigured });
+      setWaConfig({ enabled: d.enabled, phoneNumberId: d.phoneNumberId, displayPhoneNumber: d.displayPhoneNumber || "", hasToken: !!d.hasToken, verifyToken: d.verifyToken, appId: d.appId || "", hasAppSecret: !!d.hasAppSecret, webhookAutoConfigured: !!d.webhookAutoConfigured });
+      if (d.appId) setWaAppId(d.appId);
       if (d.phoneNumberId && d.hasToken) setWaStep("configured");
     }
     setWaLoading(false);
@@ -374,7 +377,7 @@ export default function SupportPage() {
                         <p className="text-xs text-green-600">WhatsApp Business conectado · {waConfig.enabled ? "Activo" : "Desactivado"}</p>
                       </div>
                       <button
-                        onClick={() => { setWaStep("idle"); setWaToken(""); setWaPhones([]); setWaSelectedPhone(null); setWaDiscoverError(""); setWaAutoResult(null); }}
+                        onClick={() => { setWaStep("idle"); setWaToken(""); setWaPhones([]); setWaSelectedPhone(null); setWaDiscoverError(""); setWaAutoResult(null); setWaAppSecret(""); }}
                         className="ml-auto text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors">
                         Cambiar número
                       </button>
@@ -417,12 +420,12 @@ export default function SupportPage() {
                   </div>
                 )}
 
-                {/* ── IDLE: Enter token ── */}
+                {/* ── IDLE: Enter credentials ── */}
                 {waStep === "idle" && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Access Token de Meta (token permanente de sistema)
+                        Access Token (token permanente de sistema)
                       </label>
                       <div className="flex gap-2">
                         <input
@@ -444,7 +447,7 @@ export default function SupportPage() {
                             const d = await res.json();
                             setWaDiscovering(false);
                             if (!res.ok) { setWaDiscoverError(d.error || "Error al conectar con Meta"); return; }
-                            if (!d.phones?.length) { setWaDiscoverError("No se encontraron números de WhatsApp Business asociados a este token."); return; }
+                            if (!d.phones?.length) { setWaDiscoverError("No se encontraron números asociados a este token."); return; }
                             setWaPhones(d.phones);
                             setWaSelectedPhone(d.phones.length === 1 ? d.phones[0] : null);
                             setWaStep("selecting");
@@ -456,7 +459,40 @@ export default function SupportPage() {
                       </div>
                       {waDiscoverError && <p className="text-xs text-red-600 mt-1">{waDiscoverError}</p>}
                       <p className="text-xs text-gray-400 mt-1">
-                        Obtén el token en <strong>Meta for Developers</strong> → Tu App → WhatsApp → API Setup → System User Token
+                        Meta for Developers → Tu App → WhatsApp → API Setup → System User Token
+                      </p>
+                    </div>
+
+                    {/* App ID + Secret for full automation */}
+                    <div className="border-t border-gray-100 pt-4">
+                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                        Automatización completa del webhook (opcional)
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">App ID</label>
+                          <input
+                            value={waAppId}
+                            onChange={(e) => setWaAppId(e.target.value)}
+                            placeholder="123456789"
+                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            App Secret {waConfig.hasAppSecret ? "(ya guardado)" : ""}
+                          </label>
+                          <input
+                            type="password"
+                            value={waAppSecret}
+                            onChange={(e) => setWaAppSecret(e.target.value)}
+                            placeholder={waConfig.hasAppSecret ? "••••••• (sin cambios)" : "abc123..."}
+                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1.5">
+                        Con esto el webhook se configura automáticamente en Meta. Encuéntralo en: Meta for Developers → Tu App → Configuración → Básica
                       </p>
                     </div>
                   </div>
@@ -507,6 +543,8 @@ export default function SupportPage() {
                               phoneNumberId: waSelectedPhone.id,
                               displayPhoneNumber: waSelectedPhone.displayPhoneNumber,
                               wabaId: waSelectedPhone.wabaId,
+                              appId: waAppId || undefined,
+                              appSecret: waAppSecret || undefined,
                               enabled: true,
                             }),
                           });

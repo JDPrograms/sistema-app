@@ -76,6 +76,8 @@ model Site {
   whatsappWabaId        String?
   whatsappToken         String?
   whatsappVerifyToken   String?
+  whatsappAppId         String?
+  whatsappAppSecret     String?
   socialLinks    String   @default("{}")
   businessHours  String   @default("[]")
   seoTitle       String?
