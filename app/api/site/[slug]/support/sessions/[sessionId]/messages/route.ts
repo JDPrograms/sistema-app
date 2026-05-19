@@ -2,6 +2,21 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { chat, buildPublicContext } from "@/lib/ai";
+import { sendWhatsAppText } from "@/lib/whatsapp";
+
+async function trySendWhatsApp(siteId: string, sessionId: string, text: string) {
+  try {
+    const [site, session] = await Promise.all([
+      prisma.site.findUnique({ where: { id: siteId }, select: { whatsappPhoneNumberId: true, whatsappToken: true } }),
+      prisma.siteChatSession.findUnique({ where: { id: sessionId }, select: { channel: true, whatsappFrom: true } }),
+    ]);
+    if (session?.channel === "whatsapp" && session.whatsappFrom && site?.whatsappPhoneNumberId && site.whatsappToken) {
+      await sendWhatsAppText(site.whatsappPhoneNumberId, site.whatsappToken, session.whatsappFrom, text);
+    }
+  } catch (e) {
+    console.error("WA send error:", e);
+  }
+}
 
 export async function POST(req: Request, { params }: { params: Promise<{ slug: string; sessionId: string }> }) {
   const { slug, sessionId } = await params;
@@ -23,7 +38,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   if (!content?.trim()) return NextResponse.json({ error: "Mensaje vacio" }, { status: 400 });
 
-  // Save the incoming message
   await prisma.siteChatMessage.create({
     data: {
       sessionId,
@@ -36,12 +50,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   await prisma.siteChatSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } });
 
-  // If session is in "waiting" state, notify but don't respond with bot
-  if (chatSession.status === "waiting" || chatSession.status === "human" || role === "human") {
+  // If human agent is replying, forward to WhatsApp if applicable
+  if (role === "human") {
+    await trySendWhatsApp(site.id, sessionId, content.trim());
     return NextResponse.json({ botReply: null });
   }
 
-  // Bot mode: generate AI response
+  if (chatSession.status === "waiting" || chatSession.status === "human") {
+    return NextResponse.json({ botReply: null });
+  }
+
+  // Bot mode: AI response
   if (chatSession.status === "bot" && role === "user") {
     try {
       const history = chatSession.messages.map((m) => ({
@@ -59,6 +78,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         data: { sessionId, role: "bot", content: result.text },
       });
       await prisma.siteChatSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } });
+
+      // Forward bot reply to WhatsApp if session is from that channel
+      await trySendWhatsApp(site.id, sessionId, result.text);
 
       return NextResponse.json({ botReply: botMsg });
     } catch {

@@ -38,6 +38,7 @@ const MODULE_CONFIG = [
   { key: "customize",    label: "Personalizar",      desc: "Colores, logo, descripcion y datos de contacto", icon: "🎨" },
   { key: "ai",           label: "Inteligencia Artificial", desc: "Agentes IA, chat publico y asistente admin", icon: "🤖" },
   { key: "support",      label: "Soporte en Vivo",   desc: "Chat en vivo con clientes y transferencia a agente humano", icon: "💬" },
+  { key: "whatsapp",     label: "WhatsApp",          desc: "Soporte y bot de IA directamente en WhatsApp Business", icon: "📱" },
 ];
 
 function parseMods(s: string): Record<string, boolean> {

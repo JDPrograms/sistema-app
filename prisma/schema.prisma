@@ -68,8 +68,11 @@ model Site {
   planType       String   @default("unlimited") // "unlimited" | "timed"
   expiresAt      DateTime?
   expiryReason   String?
-  whatsapp       String?
-  mapUrl         String?
+  whatsapp              String?
+  mapUrl                String?
+  whatsappPhoneNumberId String?
+  whatsappToken         String?
+  whatsappVerifyToken   String?
   socialLinks    String   @default("{}")
   businessHours  String   @default("[]")
   seoTitle       String?
@@ -295,6 +298,8 @@ model SiteChatSession {
   queueId           String?
   queueName         String?
   queue             SupportQueue?  @relation(fields: [queueId], references: [id], onDelete: SetNull)
+  channel           String         @default("web")
+  whatsappFrom      String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   messages          SiteChatMessage[]
