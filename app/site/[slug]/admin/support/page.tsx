@@ -79,7 +79,9 @@ export default function SupportPage() {
   const [waAppId, setWaAppId] = useState("");
   const [waAppSecret, setWaAppSecret] = useState("");
   const [waManualWabaId, setWaManualWabaId] = useState("");
-  const [waShowManual, setWaShowManual] = useState(false);
+  const [waManualPhoneId, setWaManualPhoneId] = useState("");
+  const [waManualDisplayPhone, setWaManualDisplayPhone] = useState("");
+  const [waSetupMode, setWaSetupMode] = useState<"manual" | "auto">("manual");
   const [statusFilter, setStatusFilter] = useState<"all" | "waiting" | "human" | "bot" | "resolved">("all");
   const [queueFilter, setQueueFilter] = useState<string>("all");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -422,134 +424,168 @@ export default function SupportPage() {
                   </div>
                 )}
 
-                {/* ── IDLE: Enter credentials ── */}
+                {/* ── IDLE: Setup ── */}
                 {waStep === "idle" && (
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Access Token (token permanente de sistema)
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          value={waToken}
-                          onChange={(e) => { setWaToken(e.target.value); setWaDiscoverError(""); }}
-                          placeholder="EAAxxxxxxxxxx..."
-                          className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                        <button
-                          onClick={async () => {
-                            if (!waToken.trim()) return;
-                            setWaDiscovering(true); setWaDiscoverError("");
-                            const res = await fetch(`/api/site/${slug}/support/whatsapp/discover`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ token: waToken, wabaId: waManualWabaId || undefined }),
-                            });
-                            const d = await res.json();
-                            setWaDiscovering(false);
-                            if (!res.ok) { setWaDiscoverError(d.error || "Error al conectar con Meta"); return; }
-                            if (!d.phones?.length) {
-                              setWaDiscoverError("No se encontraron números. Intenta ingresar el WABA ID manualmente abajo.");
-                              setWaShowManual(true);
-                              return;
-                            }
-                            setWaPhones(d.phones);
-                            setWaSelectedPhone(d.phones.length === 1 ? d.phones[0] : null);
-                            setWaStep("selecting");
-                          }}
-                          disabled={waDiscovering || !waToken.trim()}
-                          className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap">
-                          {waDiscovering ? "Buscando..." : "Descubrir →"}
-                        </button>
-                      </div>
-                      {waDiscoverError && (
-                        <p className="text-xs text-red-600 mt-1">{waDiscoverError}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        Meta for Developers → Tu App → WhatsApp → API Setup → System User Token
-                      </p>
+                    {/* Mode switcher */}
+                    <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+                      <button onClick={() => setWaSetupMode("manual")}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors ${waSetupMode === "manual" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
+                        Entrada manual
+                      </button>
+                      <button onClick={() => setWaSetupMode("auto")}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors ${waSetupMode === "auto" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
+                        Auto-descubrir
+                      </button>
+                    </div>
 
-                      {/* Manual WABA ID fallback */}
-                      {waShowManual && (
-                        <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-                          <p className="text-xs font-semibold text-amber-800">Ingresa el WABA ID manualmente</p>
-                          <p className="text-xs text-amber-700">
-                            Encuéntralo en: Meta Business Suite → Configuración → Cuentas de WhatsApp → ID de cuenta
-                          </p>
-                          <div className="flex gap-2">
+                    {/* ── MANUAL MODE ── */}
+                    {waSetupMode === "manual" && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Phone Number ID *</label>
+                            <input
+                              value={waManualPhoneId}
+                              onChange={(e) => setWaManualPhoneId(e.target.value)}
+                              placeholder="985374677992677"
+                              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                            <p className="text-xs text-gray-400 mt-0.5">Meta for Developers → Tu App → WhatsApp → API Setup</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp Business Account ID (WABA ID) *</label>
                             <input
                               value={waManualWabaId}
                               onChange={(e) => setWaManualWabaId(e.target.value)}
-                              placeholder="123456789012345"
-                              className="flex-1 border border-amber-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"
+                              placeholder="1445089359927385"
+                              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                            <p className="text-xs text-gray-400 mt-0.5">Meta Business Suite → Configuración → Cuentas de WhatsApp → ID de cuenta</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Número de teléfono (para mostrar)</label>
+                            <input
+                              value={waManualDisplayPhone}
+                              onChange={(e) => setWaManualDisplayPhone(e.target.value)}
+                              placeholder="+1 829 954 1232"
+                              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Access Token *</label>
+                            <input
+                              type="password"
+                              value={waToken}
+                              onChange={(e) => setWaToken(e.target.value)}
+                              placeholder="EAAxxxxxxxxxx..."
+                              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                            <p className="text-xs text-gray-400 mt-0.5">Meta for Developers → Tu App → WhatsApp → API Setup → System User Token</p>
+                          </div>
+                        </div>
+
+                        {waDiscoverError && <p className="text-xs text-red-600">{waDiscoverError}</p>}
+
+                        <button
+                          onClick={async () => {
+                            if (!waManualPhoneId.trim() || !waManualWabaId.trim() || !waToken.trim()) {
+                              setWaDiscoverError("Phone Number ID, WABA ID y Access Token son obligatorios");
+                              return;
+                            }
+                            setWaSaving(true); setWaDiscoverError(""); setWaAutoResult(null);
+                            const res = await fetch(`/api/site/${slug}/support/whatsapp`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                token: waToken,
+                                phoneNumberId: waManualPhoneId.trim(),
+                                displayPhoneNumber: waManualDisplayPhone.trim() || waManualPhoneId.trim(),
+                                wabaId: waManualWabaId.trim(),
+                                appId: waAppId || undefined,
+                                appSecret: waAppSecret || undefined,
+                                enabled: true,
+                              }),
+                            });
+                            setWaSaving(false);
+                            if (res.ok) {
+                              const d = await res.json();
+                              setWaAutoResult(d.automation ?? null);
+                              setWaToken(""); setWaAppSecret("");
+                              await loadWaConfig();
+                            } else {
+                              setWaDiscoverError("Error al guardar. Verifica los datos.");
+                            }
+                          }}
+                          disabled={waSaving || !waManualPhoneId.trim() || !waManualWabaId.trim() || !waToken.trim()}
+                          className="w-full px-4 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
+                          {waSaving ? "Conectando..." : "Conectar WhatsApp"}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── AUTO MODE ── */}
+                    {waSetupMode === "auto" && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Access Token</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={waToken}
+                              onChange={(e) => { setWaToken(e.target.value); setWaDiscoverError(""); }}
+                              placeholder="EAAxxxxxxxxxx..."
+                              className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                             />
                             <button
                               onClick={async () => {
-                                if (!waToken.trim() || !waManualWabaId.trim()) return;
+                                if (!waToken.trim()) return;
                                 setWaDiscovering(true); setWaDiscoverError("");
                                 const res = await fetch(`/api/site/${slug}/support/whatsapp/discover`, {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ token: waToken, wabaId: waManualWabaId }),
+                                  body: JSON.stringify({ token: waToken }),
                                 });
                                 const d = await res.json();
                                 setWaDiscovering(false);
-                                if (!res.ok || !d.phones?.length) {
-                                  setWaDiscoverError(d.error || "No se encontraron números para ese WABA ID.");
+                                if (!res.ok) { setWaDiscoverError(d.error || "Error al conectar con Meta"); return; }
+                                if (!d.phones?.length) {
+                                  setWaDiscoverError("No se encontraron números. Usa entrada manual.");
+                                  setWaSetupMode("manual");
                                   return;
                                 }
                                 setWaPhones(d.phones);
                                 setWaSelectedPhone(d.phones.length === 1 ? d.phones[0] : null);
                                 setWaStep("selecting");
                               }}
-                              disabled={waDiscovering || !waManualWabaId.trim()}
-                              className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors whitespace-nowrap">
-                              {waDiscovering ? "..." : "Buscar"}
+                              disabled={waDiscovering || !waToken.trim()}
+                              className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+                              {waDiscovering ? "Buscando..." : "Descubrir →"}
                             </button>
                           </div>
+                          {waDiscoverError && <p className="text-xs text-red-600 mt-1">{waDiscoverError}</p>}
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {!waShowManual && (
-                        <button onClick={() => setWaShowManual(true)}
-                          className="text-xs text-gray-400 hover:text-gray-600 mt-1 underline">
-                          ¿No aparecen tus números? Ingresa el WABA ID manualmente
-                        </button>
-                      )}
-                    </div>
-
-                    {/* App ID + Secret for full automation */}
-                    <div className="border-t border-gray-100 pt-4">
-                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
-                        Automatización completa del webhook (opcional)
-                      </p>
+                    {/* App ID + Secret (both modes) */}
+                    <div className="border-t border-gray-100 pt-3">
+                      <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">Webhook automático (opcional)</p>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">App ID</label>
-                          <input
-                            value={waAppId}
-                            onChange={(e) => setWaAppId(e.target.value)}
+                          <input value={waAppId} onChange={(e) => setWaAppId(e.target.value)}
                             placeholder="123456789"
-                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
-                          />
+                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            App Secret {waConfig.hasAppSecret ? "(ya guardado)" : ""}
-                          </label>
-                          <input
-                            type="password"
-                            value={waAppSecret}
-                            onChange={(e) => setWaAppSecret(e.target.value)}
-                            placeholder={waConfig.hasAppSecret ? "••••••• (sin cambios)" : "abc123..."}
-                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                          />
+                          <label className="block text-xs font-medium text-gray-600 mb-1">App Secret {waConfig.hasAppSecret ? "(guardado)" : ""}</label>
+                          <input type="password" value={waAppSecret} onChange={(e) => setWaAppSecret(e.target.value)}
+                            placeholder={waConfig.hasAppSecret ? "sin cambios" : "abc123..."}
+                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1.5">
-                        Con esto el webhook se configura automáticamente en Meta. Encuéntralo en: Meta for Developers → Tu App → Configuración → Básica
-                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Con esto el webhook se registra solo en Meta. Meta for Developers → Tu App → Configuración básica</p>
                     </div>
                   </div>
                 )}
