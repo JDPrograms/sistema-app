@@ -31,14 +31,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
     theme_color: themeColor,
     lang: "es",
     categories: ["business"],
-    icons: site.logoUrl
-      ? [
-          { src: site.logoUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" },
-          { src: site.logoUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" },
-        ]
-      : [
-          { src: "/file.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-        ],
+    icons: [
+      { src: `/site/${slug}/icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+      { src: `/site/${slug}/icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+    ],
   };
 
   return NextResponse.json(manifest, {
