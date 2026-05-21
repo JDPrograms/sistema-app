@@ -40,7 +40,10 @@ export default function AppointmentsPage() {
     if (filterStatus) params.set("status", filterStatus);
     if (filterDate) params.set("date", filterDate);
     const r = await fetch(`/api/site/${slug}/appointments?${params}`);
-    if (r.ok) setAppointments(await r.json());
+    if (r.ok) {
+      const json = await r.json();
+      setAppointments(Array.isArray(json) ? json : (json.data ?? []));
+    }
     setLoading(false);
   }, [slug, filterStatus, filterDate]);
 

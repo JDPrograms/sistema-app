@@ -38,6 +38,7 @@ const NAV_SECTIONS = [
   {
     label: "Ayuda",
     links: [
+      { href: "/admin/director", label: "🤖 Director IA", color: "text-purple-300" },
       { href: "/admin/modules", label: "📖 Guía de módulos", color: "text-emerald-300" },
     ],
   },

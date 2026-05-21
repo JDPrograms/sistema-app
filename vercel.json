@@ -4,7 +4,14 @@
     {
       "path": "/api/cron/appointment-reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/monitor",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/monitor",
+      "schedule": "0 14 * * 1"
     }
   ]
 }
-
