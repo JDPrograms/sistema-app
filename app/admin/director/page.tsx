@@ -53,6 +53,8 @@ export default function DirectorPage() {
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; error?: string; fix?: string; messageId?: string; checks?: Record<string, any> } | null>(null);
   const [tab, setTab] = useState<"chat" | "monitor">("chat");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -125,6 +127,19 @@ export default function DirectorPage() {
     setTimeout(() => setEmailSent(false), 4000);
   }
 
+  async function testEmail() {
+    setTestingEmail(true);
+    setTestResult(null);
+    try {
+      const r = await fetch("/api/admin/test-email", { method: "POST" });
+      const data = await r.json();
+      setTestResult(data);
+    } catch (e: any) {
+      setTestResult({ ok: false, error: e.message });
+    }
+    setTestingEmail(false);
+  }
+
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -151,7 +166,14 @@ export default function DirectorPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+          <button
+            onClick={testEmail}
+            disabled={testingEmail}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors"
+          >
+            {testingEmail ? "Probando..." : "🔧 Probar email"}
+          </button>
           <button
             onClick={sendReport}
             disabled={sendingEmail}
@@ -164,6 +186,34 @@ export default function DirectorPage() {
           </button>
         </div>
       </div>
+
+      {/* Test email result */}
+      {testResult && (
+        <div className={`mb-4 p-4 rounded-xl border text-sm ${
+          testResult.ok
+            ? "bg-green-50 border-green-200 text-green-800"
+            : "bg-red-50 border-red-200 text-red-800"
+        }`}>
+          {testResult.ok ? (
+            <p>✅ <strong>Email enviado correctamente.</strong> ID: <code className="text-xs">{testResult.messageId}</code></p>
+          ) : (
+            <div className="space-y-2">
+              <p>❌ <strong>Error:</strong> {testResult.error}</p>
+              {testResult.fix && (
+                <p className="text-xs whitespace-pre-line opacity-80">💡 {testResult.fix}</p>
+              )}
+              {testResult.checks && (
+                <div className="text-xs mt-2 space-y-0.5 opacity-70">
+                  <p>RESEND_API_KEY: {testResult.checks.RESEND_API_KEY ? "✅ configurado" : "❌ falta"}</p>
+                  <p>SYSTEM_EMAIL_FROM: <code>{testResult.checks.SYSTEM_EMAIL_FROM}</code></p>
+                  <p>DIRECTOR_EMAIL: <code>{testResult.checks.DIRECTOR_EMAIL}</code></p>
+                </div>
+              )}
+            </div>
+          )}
+          <button onClick={() => setTestResult(null)} className="mt-2 text-xs underline opacity-60 hover:opacity-100">Cerrar</button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-gray-200">

@@ -67,22 +67,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const service = serviceId ? site.services.find((s) => s.id === serviceId) : null;
 
-  // Conflict detection: same staff + same date + same time slot
+  // Resolve staff name from staffId
+  let staffRecord: { id: string; name: string } | null = null;
   if (body.staffId) {
-    const conflict = await prisma.siteAppointment.findFirst({
-      where: {
-        siteId: site.id,
-        staffId: body.staffId,
-        date,
-        time,
-        status: { notIn: ["cancelled"] },
-      },
+    staffRecord = await prisma.siteStaff.findFirst({
+      where: { id: body.staffId, siteId: site.id, isActive: true },
+      select: { id: true, name: true },
     });
-    if (conflict) {
-      return NextResponse.json(
-        { error: "El profesional ya tiene una cita en ese horario" },
-        { status: 409 }
-      );
+
+    if (staffRecord) {
+      const conflict = await prisma.siteAppointment.findFirst({
+        where: {
+          siteId: site.id,
+          staffId: staffRecord.id,
+          date,
+          time,
+          status: { notIn: ["cancelled"] },
+        },
+      });
+      if (conflict) {
+        return NextResponse.json(
+          { error: "El profesional ya tiene una cita en ese horario" },
+          { status: 409 }
+        );
+      }
     }
   }
 
@@ -94,6 +102,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       clientPhone: clientPhone || null,
       serviceId: serviceId || null,
       serviceName: service?.name || null,
+      staffId:   staffRecord?.id   || null,
+      staffName: staffRecord?.name || null,
       date,
       time,
       notes: notes || null,
@@ -110,6 +120,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     html: appointmentConfirmationHtml({
       clientName,
       serviceName: service?.name,
+      staffName: staffRecord?.name,
       date,
       time,
       businessName: (site as any).name,
