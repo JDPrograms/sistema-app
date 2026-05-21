@@ -124,6 +124,7 @@ export default async function SiteAdminLayout({
     { href: `/site/${slug}/admin/audit-log`, label: "Actividad 📋" },
     { href: `/site/${slug}/admin/admins`, label: "Administradores" },
     { href: `/site/${slug}/admin/security`, label: "Seguridad 🔐" },
+    { href: `/site/${slug}/admin/help`, label: "Guía de módulos 📖" },
   ];
 
   const signOutSlot = isSuperAdmin ? (

@@ -35,6 +35,12 @@ const NAV_SECTIONS = [
       { href: "/admin/security", label: "🔐 Seguridad", color: "text-slate-300" },
     ],
   },
+  {
+    label: "Ayuda",
+    links: [
+      { href: "/admin/modules", label: "📖 Guía de módulos", color: "text-emerald-300" },
+    ],
+  },
 ];
 
 export default function SuperAdminSidebar({ userName, signOutSlot }: Props) {
