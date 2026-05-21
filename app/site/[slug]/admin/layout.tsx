@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import AdminChat from "@/components/ai/AdminChat";
-import SiteAdminSidebar from "@/components/admin/SiteAdminSidebar";
+import SiteAdminSidebar, { type NavSection } from "@/components/admin/SiteAdminSidebar";
+import SiteAdminPageBanner from "@/components/admin/SiteAdminPageBanner";
 import { PushSubscriber } from "@/components/PushSubscriber";
 import NotificationBell from "@/components/admin/NotificationBell";
 
@@ -88,43 +89,66 @@ export default async function SiteAdminLayout({
 
   const show = (key: string) => isSuperAdmin || mods[key] === true;
 
-  const navLinks = [
-    { href: `/site/${slug}/admin`, label: "Dashboard" },
-    // Agenda y ventas
-    ...(show("appointments") ? [{ href: `/site/${slug}/admin/appointments`, label: "Citas 📅" }] : []),
-    ...(show("calendar")     ? [{ href: `/site/${slug}/admin/calendar`, label: "Calendario 🗓️" }] : []),
-    ...(show("appointments") ? [{ href: `/site/${slug}/admin/staff`, label: "Personal" }] : []),
-    ...(show("appointments") ? [{ href: `/site/${slug}/admin/waiting-list`, label: "Lista de espera" }] : []),
-    ...(show("products")     ? [{ href: `/site/${slug}/admin/products`, label: "Productos 📦" }] : []),
-    ...(show("billing")      ? [{ href: `/site/${slug}/admin/billing`, label: "Contabilidad 🧾" }] : []),
-    ...(show("coupons")      ? [{ href: `/site/${slug}/admin/coupons`, label: "Cupones 🎟️" }] : []),
-    ...(show("loyalty")      ? [{ href: `/site/${slug}/admin/loyalty`, label: "Lealtad ⭐" }] : []),
-    // Clientes y CRM
-    ...(show("users")        ? [{ href: `/site/${slug}/admin/users`, label: "Usuarios 👥" }] : []),
-    ...(show("crm")          ? [{ href: `/site/${slug}/admin/crm`, label: "CRM 🗂️" }] : []),
-    ...(show("reviews")      ? [{ href: `/site/${slug}/admin/reviews`, label: "Reseñas ⭐" }] : []),
-    ...(show("newsletter")   ? [{ href: `/site/${slug}/admin/newsletter`, label: "Newsletter 📧" }] : []),
-    // Contenido
-    ...(show("content")      ? [{ href: `/site/${slug}/admin/content`, label: "Contenido 📋" }] : []),
-    ...(show("gallery")      ? [{ href: `/site/${slug}/admin/gallery`, label: "Galería 🖼️" }] : []),
-    ...(show("blog")         ? [{ href: `/site/${slug}/admin/blog`, label: "Blog ✍️" }] : []),
-    ...(show("faq")          ? [{ href: `/site/${slug}/admin/faq`, label: "FAQ ❓" }] : []),
-    ...(show("customize")    ? [{ href: `/site/${slug}/admin/customize`, label: "Personalizar 🎨" }] : []),
-    ...(show("customize")    ? [{ href: `/site/${slug}/admin/sections`, label: "Secciones ⟡" }] : []),
-    ...(show("customize")    ? [{ href: `/site/${slug}/admin/builder`, label: "Constructor ✦" }] : []),
-    ...(show("ads")          ? [{ href: `/site/${slug}/admin/ads`, label: "Publicidades 📢" }] : []),
-    // Comunicacion
-    ...(show("ai")           ? [{ href: `/site/${slug}/admin/ai`, label: "IA 🤖" }] : []),
-    ...(show("support")      ? [{ href: `/site/${slug}/admin/support`, label: "Soporte 💬" }] : []),
-    // Operaciones
-    ...(show("tasks")        ? [{ href: `/site/${slug}/admin/tasks`, label: "Tareas ✅" }] : []),
-    ...(show("pwa")          ? [{ href: `/site/${slug}/admin/app`, label: "App Android 📲" }] : []),
-    // Admin
-    { href: `/site/${slug}/admin/reports`, label: "Reportes 📊" },
-    { href: `/site/${slug}/admin/audit-log`, label: "Actividad 📋" },
-    { href: `/site/${slug}/admin/admins`, label: "Administradores" },
-    { href: `/site/${slug}/admin/security`, label: "Seguridad 🔐" },
-    { href: `/site/${slug}/admin/help`, label: "Guía de módulos 📖" },
+  const s = (key: string) => `/site/${slug}/admin/${key}`;
+
+  const agenda = [
+    ...(show("appointments") ? [{ href: s("appointments"), label: "📅 Citas" }] : []),
+    ...(show("calendar")     ? [{ href: s("calendar"),     label: "🗓️ Calendario" }] : []),
+    ...(show("appointments") ? [{ href: s("staff"),        label: "👤 Personal" }] : []),
+    ...(show("appointments") ? [{ href: s("waiting-list"), label: "⏳ Lista de espera" }] : []),
+  ];
+  const ventas = [
+    ...(show("products") ? [{ href: s("products"), label: "📦 Productos" }] : []),
+    ...(show("billing")  ? [{ href: s("billing"),  label: "🧾 Contabilidad" }] : []),
+    ...(show("coupons")  ? [{ href: s("coupons"),  label: "🎟️ Cupones" }] : []),
+    ...(show("loyalty")  ? [{ href: s("loyalty"),  label: "⭐ Lealtad" }] : []),
+  ];
+  const clientes = [
+    ...(show("users")      ? [{ href: s("users"),      label: "👥 Usuarios" }] : []),
+    ...(show("crm")        ? [{ href: s("crm"),        label: "🗂️ CRM" }] : []),
+    ...(show("reviews")    ? [{ href: s("reviews"),    label: "⭐ Reseñas" }] : []),
+    ...(show("newsletter") ? [{ href: s("newsletter"), label: "📧 Newsletter" }] : []),
+  ];
+  const contenido = [
+    ...(show("content") ? [{ href: s("content"), label: "📋 Contenido" }] : []),
+    ...(show("gallery") ? [{ href: s("gallery"), label: "🖼️ Galería" }] : []),
+    ...(show("blog")    ? [{ href: s("blog"),    label: "✍️ Blog" }] : []),
+    ...(show("faq")     ? [{ href: s("faq"),     label: "❓ FAQ" }] : []),
+  ];
+  const apariencia = [
+    ...(show("customize") ? [{ href: s("customize"), label: "🎨 Personalizar" }] : []),
+    ...(show("customize") ? [{ href: s("sections"),  label: "⟡ Secciones" }] : []),
+    ...(show("customize") ? [{ href: s("builder"),   label: "✦ Constructor" }] : []),
+  ];
+  const marketing = [
+    ...(show("ads") ? [{ href: s("ads"), label: "📢 Publicidades" }] : []),
+    ...(show("ai")  ? [{ href: s("ai"),  label: "🤖 IA" }] : []),
+  ];
+  const operaciones = [
+    ...(show("support") ? [{ href: s("support"), label: "💬 Soporte" }] : []),
+    ...(show("tasks")   ? [{ href: s("tasks"),   label: "✅ Tareas" }] : []),
+    ...(show("pwa")     ? [{ href: s("app"),     label: "📲 App Android" }] : []),
+  ];
+
+  const navSections: NavSection[] = [
+    { label: "",          links: [{ href: `/site/${slug}/admin`, label: "📊 Dashboard", exact: true }] },
+    ...(agenda.length      ? [{ label: "Agenda",      links: agenda }]      : []),
+    ...(ventas.length      ? [{ label: "Ventas",       links: ventas }]      : []),
+    ...(clientes.length    ? [{ label: "Clientes",     links: clientes }]    : []),
+    ...(contenido.length   ? [{ label: "Contenido",    links: contenido }]   : []),
+    ...(apariencia.length  ? [{ label: "Apariencia",   links: apariencia }]  : []),
+    ...(marketing.length   ? [{ label: "Marketing",    links: marketing }]   : []),
+    ...(operaciones.length ? [{ label: "Operaciones",  links: operaciones }] : []),
+    {
+      label: "Panel",
+      links: [
+        { href: s("reports"),   label: "📊 Reportes" },
+        { href: s("audit-log"), label: "📋 Actividad" },
+        { href: s("admins"),    label: "👑 Administradores" },
+        { href: s("security"),  label: "🔐 Seguridad" },
+        { href: s("help"),      label: "📖 Guía de módulos" },
+      ],
+    },
   ];
 
   const signOutSlot = isSuperAdmin ? (
@@ -163,7 +187,7 @@ export default async function SiteAdminLayout({
           siteName={site.name}
           siteLogoUrl={site.logoUrl}
           sitePrimaryColor={site.primaryColor}
-          navLinks={navLinks}
+          navSections={navSections}
           isSuperAdmin={isSuperAdmin}
           userName={session.user?.name ?? ""}
           signOutSlot={signOutSlot}
@@ -175,7 +199,10 @@ export default async function SiteAdminLayout({
             <span className="font-semibold text-sm text-gray-700 dark:text-slate-200 truncate">{site.name}</span>
             <NotificationBell slug={slug} />
           </div>
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-auto">
+            <SiteAdminPageBanner slug={slug} />
+            {children}
+          </main>
         </div>
 
         {(isSuperAdmin || mods.ai === true) && (
