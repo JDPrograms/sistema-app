@@ -139,7 +139,7 @@ export default async function SiteAdminLayout({
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col transition-colors duration-200">
       <PushSubscriber />
       {/* Expiry banner */}
       {expiryStatus && expiryStatus.type !== "expired" && (
@@ -169,9 +169,9 @@ export default async function SiteAdminLayout({
         />
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Mobile top spacer so hamburger button doesn't overlap content */}
-          <div className="md:hidden h-14 flex-shrink-0 bg-white border-b border-gray-100 flex items-center justify-between px-14 pr-4">
-            <span className="font-semibold text-sm text-gray-700 truncate">{site.name}</span>
+          {/* Mobile top bar */}
+          <div className="md:hidden h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between px-14 pr-4 transition-colors duration-200">
+            <span className="font-semibold text-sm text-gray-700 dark:text-slate-200 truncate">{site.name}</span>
             <NotificationBell slug={slug} />
           </div>
           <main className="flex-1 overflow-auto">{children}</main>
