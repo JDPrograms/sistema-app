@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { notifyDirector } from "@/lib/director-notify";
 
 export async function GET() {
   const session = await auth();
@@ -56,6 +57,14 @@ export async function POST(req: Request) {
       },
     },
   });
+
+  notifyDirector({
+    event: "site_created",
+    title: `Nuevo sitio creado: ${site.name}`,
+    body: `Se creó el sitio "${site.name}" (/${site.slug})\nPlantilla: ${site.template}\nAdmin: ${adminEmail}`,
+    dedupKey: site.id,
+    cooldownMinutes: 0,
+  }).catch(() => {});
 
   return NextResponse.json(site, { status: 201 });
 }
