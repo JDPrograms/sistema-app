@@ -142,10 +142,9 @@ export default function SchoolTemplate({ site, appointmentsEnabled = true, child
                   key={course.id}
                   className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow"
                 >
-                  <div
-                    className="h-3 w-full"
-                    style={{ backgroundColor: primary }}
-                  />
+                  {course.imageUrl
+                    ? <img src={course.imageUrl} alt={course.name} className="w-full h-44 object-cover" />
+                    : <div className="h-3 w-full" style={{ backgroundColor: primary }} />}
                   <div className="p-6">
                     <h3 className="text-lg font-extrabold text-gray-900 mb-2">{course.name}</h3>
                     {course.description && (

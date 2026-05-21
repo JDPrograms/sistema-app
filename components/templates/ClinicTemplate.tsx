@@ -110,10 +110,11 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {site.services.map((s) => (
-                <div key={s.id} className="bg-white rounded-2xl p-6 shadow-sm border border-blue-50 hover:shadow-md transition-shadow">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-2xl" style={{ backgroundColor: `${primary}15` }}>
-                    🩺
-                  </div>
+                <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-blue-50 hover:shadow-md transition-shadow overflow-hidden">
+                  {s.imageUrl
+                    ? <img src={s.imageUrl} alt={s.name} className="w-full h-40 object-cover" />
+                    : <div className="p-6 pb-0"><div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-2xl" style={{ backgroundColor: `${primary}15` }}>🩺</div></div>}
+                  <div className="p-6 pt-4">
                   <h3 className="text-lg font-bold text-gray-900 mb-2">{s.name}</h3>
                   {s.description && <p className="text-sm text-gray-500 leading-relaxed mb-4">{s.description}</p>}
                   <div className="flex items-center gap-2 flex-wrap">
@@ -127,6 +128,7 @@ export default function ClinicTemplate({ site, appointmentsEnabled = true, child
                         {s.duration} min
                       </span>
                     )}
+                  </div>
                   </div>
                 </div>
               ))}

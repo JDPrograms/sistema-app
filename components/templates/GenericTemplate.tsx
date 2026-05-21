@@ -1,7 +1,7 @@
 import BookingSection from "@/components/booking/BookingSection";
 import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
-interface Service { id: string; name: string; description?: string | null; price?: number | null }
+interface Service { id: string; name: string; description?: string | null; price?: number | null; imageUrl?: string | null; }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string; logoUrl?: string;
@@ -74,15 +74,20 @@ export default function GenericTemplate({ site, appointmentsEnabled = true, chil
             <h2 className="text-3xl font-bold text-center mb-10 text-gray-900">Servicios</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {site.services.map((s) => (
-                <div key={s.id} className="border border-gray-100 rounded-2xl p-6 hover:shadow-md transition-shadow">
-                  <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center text-white font-bold" style={{ backgroundColor: primary }}>
-                    ✓
-                  </div>
+                <div key={s.id} className="border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                  {s.imageUrl
+                    ? <img src={s.imageUrl} alt={s.name} className="w-full h-40 object-cover" />
+                    : null}
+                  <div className="p-6">
+                  {!s.imageUrl && (
+                    <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center text-white font-bold" style={{ backgroundColor: primary }}>✓</div>
+                  )}
                   <h3 className="font-bold text-gray-900 mb-2">{s.name}</h3>
                   {s.description && <p className="text-gray-500 text-sm">{s.description}</p>}
                   {s.price != null && (
                     <p className="mt-4 font-bold" style={{ color: primary }}>${s.price.toFixed(2)}</p>
                   )}
+                  </div>
                 </div>
               ))}
             </div>

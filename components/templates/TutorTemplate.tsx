@@ -104,11 +104,15 @@ export default function TutorTemplate({ site, appointmentsEnabled = true, childr
             <p className="text-center text-gray-500 mb-12">Modalidades adaptadas a tus necesidades</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {site.services.map((s, i) => (
-                <div key={s.id} className="bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
+                  {s.imageUrl && <img src={s.imageUrl} alt={s.name} className="w-full h-40 object-cover" />}
+                  <div className="p-7">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 text-white font-bold" style={{ backgroundColor: primary }}>
-                      {i + 1}
-                    </div>
+                    {!s.imageUrl && (
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 text-white font-bold" style={{ backgroundColor: primary }}>
+                        {i + 1}
+                      </div>
+                    )}
                     <div className="flex-1">
                       <h3 className="font-bold text-lg text-gray-900 mb-2">{s.name}</h3>
                       {s.description && <p className="text-gray-500 text-sm mb-3">{s.description}</p>}
@@ -121,6 +125,7 @@ export default function TutorTemplate({ site, appointmentsEnabled = true, childr
                         )}
                       </div>
                     </div>
+                  </div>
                   </div>
                 </div>
               ))}

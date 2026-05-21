@@ -106,10 +106,12 @@ export default function LawyerTemplate({ site, appointmentsEnabled = true, child
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {site.services.map((s) => (
-                <div key={s.id} className="bg-white rounded-xl p-7 shadow-sm border border-gray-200 flex gap-5 hover:shadow-md transition-shadow group"
+                <div key={s.id} className="bg-white rounded-xl shadow-sm border border-gray-200 flex hover:shadow-md transition-shadow group overflow-hidden"
                   style={{ borderLeft: `4px solid ${secondary}` }}>
-                  <div className="text-3xl shrink-0 mt-0.5">⚖️</div>
-                  <div className="flex-1">
+                  {s.imageUrl
+                    ? <img src={s.imageUrl} alt={s.name} className="w-24 object-cover flex-shrink-0" />
+                    : <div className="text-3xl shrink-0 flex items-center px-5">⚖️</div>}
+                  <div className="p-7 flex-1">
                     <h3 className="font-bold text-lg text-gray-900 group-hover:opacity-80 transition-opacity mb-2">{s.name}</h3>
                     {s.description && <p className="text-gray-500 text-sm leading-relaxed">{s.description}</p>}
                     {s.price != null && (

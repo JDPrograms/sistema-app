@@ -94,9 +94,11 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
             {site.services.map((s) => (
               <div
                 key={s.id}
-                className="bg-[#1a1a1a] rounded-2xl p-6 border border-white/5 hover:border-white/20 transition-colors overflow-hidden relative"
+                className="bg-[#1a1a1a] rounded-2xl border border-white/5 hover:border-white/20 transition-colors overflow-hidden relative"
                 style={{ borderLeft: `4px solid ${primary}` }}
               >
+                {s.imageUrl && <img src={s.imageUrl} alt={s.name} className="w-full h-40 object-cover opacity-80" />}
+                <div className="p-6">
                 <h3 className="text-lg font-black uppercase mb-2">{s.name}</h3>
                 {s.description && <p className="text-sm text-gray-400 mb-4 leading-relaxed">{s.description}</p>}
                 <div className="flex items-center gap-3 mt-auto">
@@ -110,6 +112,7 @@ export default function GymTemplate({ site, appointmentsEnabled = true, children
                       {s.duration} min
                     </span>
                   )}
+                </div>
                 </div>
               </div>
             ))}

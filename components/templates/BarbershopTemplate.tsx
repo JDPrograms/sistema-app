@@ -1,7 +1,7 @@
 import BookingSection from "@/components/booking/BookingSection";
 import { parseLayoutConfig, getSecStyle } from "@/lib/layout-config";
 
-interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null }
+interface Service { id: string; name: string; description?: string | null; price?: number | null; duration?: number | null; imageUrl?: string | null; }
 interface Site {
   name: string; slug: string; description?: string; phone?: string;
   address?: string; email?: string; primaryColor: string; secondaryColor: string; logoUrl?: string;
@@ -60,7 +60,9 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {site.services.map((s) => (
-                <div key={s.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  {s.imageUrl && <img src={s.imageUrl} alt={s.name} className="w-full h-44 object-cover" />}
+                  <div className="p-6">
                   <h3 className="font-bold text-lg text-gray-900 mb-2">{s.name}</h3>
                   {s.description && <p className="text-gray-500 text-sm mb-4">{s.description}</p>}
                   <div className="flex items-center justify-between mt-auto">
@@ -70,6 +72,7 @@ export default function BarbershopTemplate({ site, appointmentsEnabled = true, c
                     {s.duration != null && (
                       <span className="text-xs text-gray-400">{s.duration} min</span>
                     )}
+                  </div>
                   </div>
                 </div>
               ))}

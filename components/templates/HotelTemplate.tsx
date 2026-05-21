@@ -157,16 +157,17 @@ export default function HotelTemplate({ site, appointmentsEnabled = true, childr
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 max-w-4xl mx-auto">
               {site.services.map((s) => (
-                <div key={s.id} className="flex items-start gap-4 bg-white/8 rounded-xl p-5 border border-white/10 hover:bg-white/12 transition-colors">
-                  <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: secondary, color: primary }}>
-                    ✓
-                  </div>
+                <div key={s.id} className="bg-white/8 rounded-xl border border-white/10 hover:bg-white/12 transition-colors overflow-hidden">
+                  {s.imageUrl && <img src={s.imageUrl} alt={s.name} className="w-full h-36 object-cover opacity-90" />}
+                  <div className="flex items-start gap-4 p-5">
+                  {!s.imageUrl && <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: secondary, color: primary }}>✓</div>}
                   <div>
                     <h3 className="font-semibold text-white">{s.name}</h3>
                     {s.description && <p className="text-xs opacity-60 mt-1 leading-relaxed">{s.description}</p>}
                     {s.price != null && (
                       <p className="text-xs mt-1.5 font-medium" style={{ color: secondary }}>${s.price.toFixed(2)}</p>
                     )}
+                  </div>
                   </div>
                 </div>
               ))}
