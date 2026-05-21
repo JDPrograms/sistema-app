@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { chat, buildPublicContext } from "@/lib/ai";
 import { sendWhatsAppText, markAsRead } from "@/lib/whatsapp";
 import { sendPushToSite } from "@/lib/push";
+import { createHmac, timingSafeEqual } from "crypto";
 
 // ── GET: Meta webhook verification ────────────────────────────────
 export async function GET(req: Request) {
@@ -29,8 +30,32 @@ export async function GET(req: Request) {
 
 // ── POST: Incoming messages ────────────────────────────────────────
 export async function POST(req: Request) {
+  const rawBody = await req.text();
+
+  // Verify HMAC-SHA256 signature from Meta
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (appSecret) {
+    const signature = req.headers.get("x-hub-signature-256");
+    if (!signature) {
+      return new Response("Missing signature", { status: 403 });
+    }
+    const expected = "sha256=" + createHmac("sha256", appSecret).update(rawBody).digest("hex");
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expected);
+    const signaturesMatch =
+      sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
+    if (!signaturesMatch) {
+      return new Response("Invalid signature", { status: 403 });
+    }
+  }
+
   // Always respond 200 quickly so Meta doesn't retry
-  const body = await req.json().catch(() => null);
+  let body: any;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
   if (!body) return NextResponse.json({ ok: true });
 
   // Process asynchronously (don't await — just fire)

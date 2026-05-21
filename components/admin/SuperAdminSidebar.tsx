@@ -63,30 +63,55 @@ export default function SuperAdminSidebar({ userName, signOutSlot }: Props) {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <Link href="/admin" onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium">
-            Dashboard
-          </Link>
-          <Link href="/admin/sites" onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium">
-            Sitios web
-          </Link>
-          <Link href="/admin/sites/new" onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium">
-            + Crear sitio
-          </Link>
-          <div className="pt-2 border-t border-slate-700 mt-2">
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-2 px-1">Principal</p>
+          <div className="space-y-1 mb-4">
+            <Link href="/admin" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium">
+              📊 Dashboard
+            </Link>
+            <Link href="/admin/sites" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium">
+              🌐 Sitios web
+            </Link>
+            <Link href="/admin/sites/new" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-green-400">
+              + Crear sitio
+            </Link>
+          </div>
+
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-2 px-1 border-t border-slate-700 pt-3">Gestión</p>
+          <div className="space-y-1 mb-4">
+            <Link href="/admin/reports" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-cyan-300">
+              📈 Reportes
+            </Link>
+            <Link href="/admin/announcements" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-blue-300">
+              📢 Anuncios
+            </Link>
+            <Link href="/admin/audit-log" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-slate-300">
+              📋 Actividad
+            </Link>
+          </div>
+
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-2 px-1 border-t border-slate-700 pt-3">Sistema</p>
+          <div className="space-y-1">
             <Link href="/admin/ai" onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-purple-300">
-              Inteligencia Artificial
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-purple-300">
+              🤖 IA global
+            </Link>
+            <Link href="/admin/system-config" onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-amber-300">
+              ⚙️ Configuración
             </Link>
             <Link href="/admin/admins" onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-amber-300">
-              Superadministradores
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-amber-300">
+              👑 Superadmins
             </Link>
             <Link href="/admin/security" onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-slate-300">
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors text-sm font-medium text-slate-300">
               🔐 Seguridad
             </Link>
           </div>

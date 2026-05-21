@@ -15,11 +15,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   if (!canManage(session, slug)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const site = await prisma.site.findUnique({ where: { slug } });
   if (!site) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const invoices = await prisma.siteInvoice.findMany({
-    where: { siteId: site.id },
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json(invoices);
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+  const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 25)));
+  const type = searchParams.get("type"); // "invoice" | "quote" | null
+
+  const where = { siteId: site.id, ...(type ? { type } : {}) };
+  const [invoices, total] = await Promise.all([
+    prisma.siteInvoice.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.siteInvoice.count({ where }),
+  ]);
+  return NextResponse.json({ data: invoices, total, page, limit });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {

@@ -114,6 +114,19 @@ model Site {
   chatAgents        SiteChatAgent[]
   supportQueues     SupportQueue[]
   pushSubscriptions PushSubscription[]
+  notifications     SiteNotification[]
+  galleryImages     SiteGalleryImage[]
+  blogPosts         SiteBlogPost[]
+  reviews           SiteReview[]
+  faqs              SiteFaq[]
+  newsletterSubs    SiteNewsletterSubscriber[]
+  loyaltyPoints     SiteLoyaltyPoint[]
+  coupons           SiteCoupon[]
+  tasks             SiteTask[]
+  staffAvailability SiteStaffAvailability[]
+  auditLogs         SiteAuditLog[]
+  customerNotes     SiteCustomerNote[]
+  waitingList       SiteWaitingList[]
 }
 
 model PushSubscription {
@@ -138,6 +151,8 @@ model SiteAdmin {
   site               Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
   isOwner            Boolean   @default(false)
   permissions        String    @default("{}")
+  mfaEnabled         Boolean   @default(false)
+  mfaSecret          String?
   googleId           String?
   googleLoginToken   String?
   googleLoginExpires DateTime?
@@ -376,6 +391,301 @@ model SiteChatAgent {
 
   @@unique([siteId, adminId])
   @@index([siteId])
+}
+
+model SiteNotification {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  type      String   @default("info") // "info" | "warning" | "success" | "error"
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([siteId, isRead])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  email     String
+  role      String    // "superadmin" | "siteadmin"
+  siteId    String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([email])
+}
+
+model EmailOtp {
+  id        String    @id @default(cuid())
+  email     String
+  code      String
+  siteId    String?
+  purpose   String    @default("login") // "login"
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+model SiteGalleryImage {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  url       String
+  caption   String?
+  category  String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([siteId])
+}
+
+model SiteBlogPost {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  excerpt     String?
+  content     String   @default("")
+  imageUrl    String?
+  category    String?
+  tags        String   @default("[]")
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  authorName  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+}
+
+model SiteReview {
+  id           String   @id @default(cuid())
+  siteId       String
+  site         Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  clientName   String
+  clientEmail  String?
+  rating       Int      @default(5)
+  comment      String?
+  isApproved   Boolean  @default(false)
+  isPublic     Boolean  @default(true)
+  serviceName  String?
+  createdAt    DateTime @default(now())
+
+  @@index([siteId])
+}
+
+model SiteFaq {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+  category  String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
+}
+
+model SiteNewsletterSubscriber {
+  id          String    @id @default(cuid())
+  siteId      String
+  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  email       String
+  name        String?
+  isActive    Boolean   @default(true)
+  source      String    @default("form") // "form" | "admin" | "import"
+  confirmedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([email, siteId])
+  @@index([siteId])
+}
+
+model SiteLoyaltyPoint {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  clientEmail String
+  clientName  String
+  points      Int      @default(0)
+  totalEarned Int      @default(0)
+  totalSpent  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  logs        SiteLoyaltyLog[]
+
+  @@unique([siteId, clientEmail])
+  @@index([siteId])
+}
+
+model SiteLoyaltyLog {
+  id           String           @id @default(cuid())
+  loyaltyId    String
+  loyalty      SiteLoyaltyPoint @relation(fields: [loyaltyId], references: [id], onDelete: Cascade)
+  points       Int
+  type         String           // "earn" | "spend" | "adjust"
+  reason       String?
+  createdAt    DateTime         @default(now())
+
+  @@index([loyaltyId])
+}
+
+model SiteCoupon {
+  id              String    @id @default(cuid())
+  siteId          String
+  site            Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  code            String
+  description     String?
+  discountType    String    @default("percent") // "percent" | "fixed"
+  discountValue   Float     @default(0)
+  minOrderValue   Float?
+  maxUses         Int?
+  usedCount       Int       @default(0)
+  isActive        Boolean   @default(true)
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([siteId, code])
+  @@index([siteId])
+}
+
+model SiteTask {
+  id          String    @id @default(cuid())
+  siteId      String
+  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      String    @default("pending") // "pending" | "in_progress" | "done" | "cancelled"
+  priority    String    @default("normal") // "low" | "normal" | "high" | "urgent"
+  assignedTo  String?
+  dueDate     DateTime?
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([siteId])
+}
+
+model SiteStaffAvailability {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  staffId   String
+  dayOfWeek Int      // 0=Sunday … 6=Saturday
+  startTime String   // "09:00"
+  endTime   String   // "18:00"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([staffId, dayOfWeek])
+  @@index([siteId])
+}
+
+model SiteAuditLog {
+  id         String   @id @default(cuid())
+  siteId     String
+  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actorName  String?
+  actorRole  String?  // "superadmin" | "siteadmin"
+  action     String   // e.g. "invoice.created" | "appointment.cancelled"
+  entityType String?
+  entityId   String?
+  details    String?  // JSON
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([siteId])
+  @@index([createdAt])
+}
+
+model SiteCustomerNote {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  clientEmail String
+  clientName  String
+  note        String
+  adminName   String?
+  isPrivate   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([siteId, clientEmail])
+}
+
+model SiteWaitingList {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  clientName  String
+  clientEmail String
+  clientPhone String?
+  serviceId   String?
+  serviceName String?
+  staffId     String?
+  staffName   String?
+  preferredDate String?
+  preferredTime String?
+  notes       String?
+  status      String   @default("waiting") // "waiting" | "notified" | "booked" | "cancelled"
+  createdAt   DateTime @default(now())
+
+  @@index([siteId])
+}
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  label     String?
+  group     String?
+  updatedAt DateTime @updatedAt
+}
+
+model SiteAnnouncement {
+  id          String    @id @default(cuid())
+  title       String
+  body        String
+  type        String    @default("info") // "info" | "warning" | "success" | "maintenance"
+  targetAll   Boolean   @default(true)
+  targetSites String    @default("[]") // JSON array of site IDs
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+}
+
+model SuperAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  actorName  String?
+  action     String
+  entityType String?
+  entityId   String?
+  details    String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
 }
 
 model SupportQueue {

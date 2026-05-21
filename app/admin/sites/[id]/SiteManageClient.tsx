@@ -3,8 +3,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CopySiteUrlBtn from "@/components/CopySiteUrlBtn";
+import { SITEADMIN_PERMS, type SiteAdminPermKey } from "@/lib/permissions";
 
-interface Admin { id: string; name: string; email: string; createdAt: string }
+interface Admin { id: string; name: string; email: string; isOwner: boolean; permissions: string; createdAt: string }
 interface Site {
   id: string; name: string; slug: string; template: string;
   isActive: boolean; hasAdminPanel: boolean; modules: string;
@@ -31,20 +32,57 @@ const templateLabels: Record<string, string> = {
   generic:    "Generico",
 };
 
-const MODULE_CONFIG = [
-  { key: "appointments", label: "Citas",             desc: "Sistema de reservas y agenda para clientes", icon: "📅" },
-  { key: "content",      label: "Contenido",         desc: "Servicios del negocio y paginas de contenido", icon: "📋" },
-  { key: "products",     label: "Productos",         desc: "Catalogo de productos con stock, precios y categorias", icon: "📦" },
-  { key: "billing",      label: "Contabilidad",      desc: "Facturas, cotizaciones, gastos e inventario", icon: "🧾" },
-  { key: "ads",          label: "Publicidades",      desc: "Banners y anuncios del sitio", icon: "📢" },
-  { key: "users",        label: "Usuarios",          desc: "Registro e inicio de sesion de clientes", icon: "👥" },
-  { key: "customize",    label: "Personalizar",      desc: "Colores, logo, descripcion y datos de contacto", icon: "🎨" },
-  { key: "ai",           label: "Inteligencia Artificial", desc: "Agentes IA, chat publico y asistente admin", icon: "🤖" },
-  { key: "support",      label: "Soporte en Vivo",   desc: "Chat en vivo con clientes y transferencia a agente humano", icon: "💬" },
-  { key: "whatsapp",     label: "WhatsApp",          desc: "Soporte y bot de IA directamente en WhatsApp Business", icon: "📱" },
-  { key: "instagram",    label: "Instagram DM",      desc: "Responde mensajes directos de Instagram con IA", icon: "📸" },
-  { key: "pwa",         label: "App Android / PWA", desc: "Permite instalar el sitio como app y subirlo a Play Store", icon: "📲" },
+const MODULE_CATEGORIES = [
+  {
+    label: "Ventas y Agenda",
+    modules: [
+      { key: "appointments", label: "Citas",         desc: "Sistema de reservas y agenda para clientes", icon: "📅" },
+      { key: "products",     label: "Productos",     desc: "Catalogo de productos con stock y precios", icon: "📦" },
+      { key: "billing",      label: "Contabilidad",  desc: "Facturas, cotizaciones, gastos e inventario", icon: "🧾" },
+      { key: "coupons",      label: "Cupones",       desc: "Codigos de descuento y promociones", icon: "🎟️" },
+      { key: "loyalty",      label: "Lealtad",       desc: "Programa de puntos y recompensas", icon: "⭐" },
+      { key: "calendar",     label: "Calendario",    desc: "Vista de calendario para citas y agenda", icon: "🗓️" },
+    ],
+  },
+  {
+    label: "Clientes y CRM",
+    modules: [
+      { key: "users",       label: "Usuarios",      desc: "Registro e inicio de sesion de clientes", icon: "👥" },
+      { key: "crm",         label: "CRM",           desc: "Notas e historial completo por cliente", icon: "🗂️" },
+      { key: "reviews",     label: "Reseñas",       desc: "Reseñas y calificaciones de clientes", icon: "⭐" },
+      { key: "newsletter",  label: "Newsletter",    desc: "Suscriptores y envio de correos masivos", icon: "📧" },
+    ],
+  },
+  {
+    label: "Contenido y Sitio",
+    modules: [
+      { key: "content",   label: "Contenido",    desc: "Servicios del negocio y paginas de contenido", icon: "📋" },
+      { key: "gallery",   label: "Galería",      desc: "Galeria de fotos del negocio", icon: "🖼️" },
+      { key: "blog",      label: "Blog",         desc: "Articulos, noticias y publicaciones", icon: "✍️" },
+      { key: "faq",       label: "FAQ",          desc: "Preguntas frecuentes visibles en el sitio", icon: "❓" },
+      { key: "ads",       label: "Publicidades", desc: "Banners y anuncios del sitio", icon: "📢" },
+      { key: "customize", label: "Personalizar", desc: "Colores, logo, descripcion y datos de contacto", icon: "🎨" },
+    ],
+  },
+  {
+    label: "Comunicacion",
+    modules: [
+      { key: "ai",        label: "Inteligencia Artificial", desc: "Agentes IA, chat publico y asistente admin", icon: "🤖" },
+      { key: "support",   label: "Soporte en Vivo",   desc: "Chat en vivo con clientes", icon: "💬" },
+      { key: "whatsapp",  label: "WhatsApp",          desc: "Bot de IA en WhatsApp Business", icon: "📱" },
+      { key: "instagram", label: "Instagram DM",      desc: "Respuestas automaticas en Instagram", icon: "📸" },
+    ],
+  },
+  {
+    label: "Operaciones",
+    modules: [
+      { key: "tasks", label: "Tareas",        desc: "Tareas internas del equipo", icon: "✅" },
+      { key: "pwa",   label: "App Android",   desc: "Instalar como app y subir a Play Store", icon: "📲" },
+    ],
+  },
 ];
+
+const MODULE_CONFIG = MODULE_CATEGORIES.flatMap((c) => c.modules);
 
 function parseMods(s: string): Record<string, boolean> {
   try { return JSON.parse(s); } catch { return {}; }
@@ -78,6 +116,36 @@ export default function SiteManageClient({ site }: { site: Site }) {
   const [savingPwa, setSavingPwa] = useState(false);
   const [pwaMsg, setPwaMsg] = useState("");
   const [pwaGuideOpen, setPwaGuideOpen] = useState(false);
+
+  // Admin permission matrix
+  const [adminPerms, setAdminPerms] = useState<Record<string, Record<string, boolean>>>(() => {
+    const map: Record<string, Record<string, boolean>> = {};
+    site.admins.forEach((a) => {
+      try { map[a.id] = JSON.parse(a.permissions || "{}"); } catch { map[a.id] = {}; }
+    });
+    return map;
+  });
+  const [savingPerms, setSavingPerms] = useState<string | null>(null);
+  const [permsMsg, setPermsMsg] = useState<Record<string, string>>({});
+
+  async function handleSaveAdminPerms(adminId: string) {
+    setSavingPerms(adminId);
+    const res = await fetch(`/api/admin/sites/${site.id}/admins/${adminId}/permissions`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions: adminPerms[adminId] }),
+    });
+    setSavingPerms(null);
+    setPermsMsg((prev) => ({ ...prev, [adminId]: res.ok ? "Guardado" : "Error" }));
+    setTimeout(() => setPermsMsg((prev) => ({ ...prev, [adminId]: "" })), 2000);
+  }
+
+  function toggleAdminPerm(adminId: string, perm: string) {
+    setAdminPerms((prev) => ({
+      ...prev,
+      [adminId]: { ...prev[adminId], [perm]: !prev[adminId]?.[perm] },
+    }));
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -275,29 +343,34 @@ export default function SiteManageClient({ site }: { site: Site }) {
           </button>
         </div>
 
-        {/* Modulos individuales */}
-        <div className="divide-y divide-gray-50">
-          {MODULE_CONFIG.map(({ key, label, desc, icon }) => {
-            const enabled = mods[key] === true;
-            return (
-              <div key={key} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{icon}</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{label}</p>
-                    <p className="text-xs text-gray-400">{desc}</p>
+        {/* Modulos por categorias */}
+        {MODULE_CATEGORIES.map((cat) => (
+          <div key={cat.label} className="mb-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-4 mb-1 px-1">{cat.label}</p>
+            <div className="divide-y divide-gray-50">
+              {cat.modules.map(({ key, label, desc, icon }) => {
+                const enabled = mods[key] === true;
+                return (
+                  <div key={key} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{icon}</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{label}</p>
+                        <p className="text-xs text-gray-400">{desc}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleMod(key)}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${enabled ? "bg-blue-600" : "bg-gray-200"}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
                   </div>
-                </div>
-                <button
-                  onClick={() => toggleMod(key)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${enabled ? "bg-blue-600" : "bg-gray-200"}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
 
         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
           {modsMsg && <span className="text-sm text-green-600">{modsMsg}</span>}
@@ -421,22 +494,63 @@ export default function SiteManageClient({ site }: { site: Site }) {
         </div>
       </div>
 
-      {/* Admins del sitio */}
+      {/* Admins del sitio — matriz de permisos */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Administradores del sitio</h2>
-        <div className="space-y-2">
-          {site.admins.map((a) => (
-            <div key={a.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-600 text-sm">
+        <div className="mb-4">
+          <h2 className="font-semibold text-gray-900">Administradores y permisos</h2>
+          <p className="text-sm text-gray-400 mt-0.5">Controla qué puede hacer cada administrador del sitio</p>
+        </div>
+        {site.admins.length === 0 && <p className="text-sm text-gray-400">No hay administradores registrados.</p>}
+        {site.admins.map((a) => (
+          <div key={a.id} className="border border-gray-200 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-700 text-sm">
                 {a.name[0]}
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">{a.name}</p>
+                <p className="text-sm font-semibold text-gray-900">{a.name}</p>
                 <p className="text-xs text-gray-400">{a.email}</p>
               </div>
+              {a.isOwner && (
+                <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Propietario — todos los permisos</span>
+              )}
             </div>
-          ))}
-        </div>
+            {!a.isOwner && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.entries(SITEADMIN_PERMS) as [SiteAdminPermKey, string][]).map(([key, label]) => {
+                    const enabled = adminPerms[a.id]?.[key] !== false;
+                    return (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          onChange={() => toggleAdminPerm(a.id, key)}
+                          className="w-4 h-4 rounded accent-blue-600"
+                        />
+                        <span className="text-xs text-gray-700">{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+                  {permsMsg[a.id] && (
+                    <span className={`text-xs ${permsMsg[a.id] === "Guardado" ? "text-green-600" : "text-red-600"}`}>
+                      {permsMsg[a.id]}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleSaveAdminPerms(a.id)}
+                    disabled={savingPerms === a.id}
+                    className="ml-auto bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  >
+                    {savingPerms === a.id ? "Guardando..." : "Guardar permisos"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Plan del sitio */}

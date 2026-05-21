@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { auth } from "@/lib/auth";
+
+const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "avif"]);
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -31,6 +39,9 @@ export async function POST(req: Request) {
     await mkdir(dir, { recursive: true });
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return NextResponse.json({ error: "Formato de imagen no permitido" }, { status: 400 });
+    }
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const filepath = join(dir, filename);
 

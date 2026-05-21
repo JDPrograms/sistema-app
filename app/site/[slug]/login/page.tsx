@@ -4,32 +4,149 @@ import { signIn } from "next-auth/react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+type AdminStep = "credentials" | "mfa" | "forgot" | "forgot-sent";
+type UserStep = "credentials" | "otp-send" | "otp-verify";
+
 export default function SiteLoginPage() {
   const { slug } = useParams() as { slug: string };
   const searchParams = useSearchParams();
   const router = useRouter();
+
   const [tab, setTab] = useState<"admin" | "user">("admin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
+  // --- Admin state ---
+  const [adminStep, setAdminStep] = useState<AdminStep>("credentials");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminOtp, setAdminOtp] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+
+  // --- User state ---
+  const [userStep, setUserStep] = useState<UserStep>("credentials");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpEmail, setOtpEmail] = useState(""); // email used for OTP flow
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const verified = searchParams.get("verified") === "1";
   const googleError = searchParams.get("error") === "google" || searchParams.get("error") === "no_admin";
 
-  async function handleSubmit(e: React.FormEvent) {
+  // ── ADMIN FLOW ─────────────────────────────────────────────────────
+  async function handleAdminCredentials(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const provider = tab === "admin" ? "siteadmin" : "siteuser";
-    const res = await signIn(provider, { email, password, siteSlug: slug, redirect: false });
+    const res = await fetch(`/api/site/${slug}/admins/auth/pre-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, password: adminPassword }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!data.valid) {
+      setError(res.status === 429 ? "Demasiados intentos. Espera un minuto." : "Credenciales incorrectas");
+      return;
+    }
+    if (data.mfaRequired) {
+      setAdminStep("mfa");
+    } else {
+      await doAdminSignIn();
+    }
+  }
+
+  async function handleAdminMfa(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    await doAdminSignIn(adminOtp);
+  }
+
+  async function doAdminSignIn(otp?: string) {
+    const res = await signIn("siteadmin", {
+      email: adminEmail,
+      password: adminPassword,
+      siteSlug: slug,
+      otp: otp ?? "",
+      redirect: false,
+    });
     setLoading(false);
     if (res?.error) {
-      setError(tab === "user"
-        ? "Credenciales incorrectas o cuenta no verificada. Revisa tu correo."
-        : "Credenciales incorrectas");
+      setError(otp ? "Código MFA incorrecto" : "Credenciales incorrectas");
     } else {
-      router.push(tab === "admin" ? `/site/${slug}/admin` : `/site/${slug}/portal`);
+      router.push(`/site/${slug}/admin`);
+    }
+  }
+
+  async function handleAdminForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    await fetch(`/api/site/${slug}/admins/auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: forgotEmail }),
+    });
+    setLoading(false);
+    setAdminStep("forgot-sent");
+  }
+
+  // ── USER FLOW ──────────────────────────────────────────────────────
+  async function handleUserCredentials(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await signIn("siteuser", { email: userEmail, password: userPassword, siteSlug: slug, redirect: false });
+    setLoading(false);
+    if (res?.error) {
+      setError("Credenciales incorrectas o cuenta no verificada. Revisa tu correo.");
+    } else {
+      router.push(`/site/${slug}/portal`);
+    }
+  }
+
+  async function handleOtpSend(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await fetch(`/api/site/${slug}/users/email-otp/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: otpEmail }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setError(data.error || "Error al enviar el código");
+      return;
+    }
+    setUserStep("otp-verify");
+    setOtpCode("");
+    setError("");
+  }
+
+  async function handleOtpVerify(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await fetch(`/api/site/${slug}/users/email-otp/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: otpEmail, code: otpCode }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setLoading(false);
+      setError(data.error || "Código incorrecto");
+      return;
+    }
+    const signInRes = await signIn("google-siteuser", { token: data.token, siteSlug: slug, redirect: false });
+    setLoading(false);
+    if (signInRes?.error) {
+      setError("Error al iniciar sesión");
+    } else {
+      router.push(`/site/${slug}/portal`);
     }
   }
 
@@ -50,72 +167,207 @@ export default function SiteLoginPage() {
         {googleError && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
             {searchParams.get("error") === "no_admin"
-              ? "No existe una cuenta de administrador con ese correo de Google."
-              : "Error al iniciar sesión con Google. Intenta de nuevo."}
+              ? "No existe una cuenta de administrador con ese correo."
+              : "Error al iniciar sesión. Intenta de nuevo."}
           </div>
         )}
 
+        {/* Tab switcher */}
         <div className="flex rounded-lg border border-gray-200 p-1 mb-6">
-          <button onClick={() => setTab("admin")}
+          <button onClick={() => { setTab("admin"); setError(""); setAdminStep("credentials"); }}
             className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${tab === "admin" ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700"}`}>
             Administrador
           </button>
-          <button onClick={() => setTab("user")}
+          <button onClick={() => { setTab("user"); setError(""); setUserStep("credentials"); }}
             className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${tab === "user" ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700"}`}>
             Usuario
           </button>
         </div>
 
-        {/* Google login — only for users */}
-        {tab === "user" && (
-          <div className="mb-5">
-            <a
-              href={`/api/auth/google?slug=${slug}&role=user`}
-              className="flex items-center justify-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Continuar con Google
-            </a>
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-              <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">o con email</span></div>
+        {/* ── ADMIN FORMS ── */}
+        {tab === "admin" && adminStep === "credentials" && (
+          <form onSubmit={handleAdminCredentials} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required autoFocus
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="correo@ejemplo.com" />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+              <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} required
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="••••••••" />
+            </div>
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+            <button type="submit" disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
+              {loading ? "Verificando..." : "Continuar"}
+            </button>
+            <div className="text-center">
+              <button type="button" onClick={() => { setAdminStep("forgot"); setForgotEmail(adminEmail); setError(""); }}
+                className="text-sm text-gray-400 hover:text-blue-600 transition-colors">
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+          </form>
+        )}
+
+        {tab === "admin" && adminStep === "mfa" && (
+          <form onSubmit={handleAdminMfa} className="space-y-4">
+            <div className="text-center mb-2">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">🔐</span>
+              </div>
+              <p className="text-sm text-gray-600">Ingresa el código de tu aplicación de autenticación</p>
+            </div>
+            <input
+              type="text" value={adminOtp} onChange={(e) => setAdminOtp(e.target.value.replace(/\D/g, ""))}
+              required maxLength={6} autoFocus autoComplete="one-time-code"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest font-mono"
+              placeholder="000000"
+            />
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+            <button type="submit" disabled={loading || adminOtp.length < 6}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
+              {loading ? "Verificando..." : "Verificar"}
+            </button>
+            <button type="button" onClick={() => { setAdminStep("credentials"); setAdminOtp(""); setError(""); }}
+              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              ← Volver
+            </button>
+          </form>
+        )}
+
+        {tab === "admin" && adminStep === "forgot" && (
+          <form onSubmit={handleAdminForgot} className="space-y-4">
+            <p className="text-sm text-gray-600">Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required autoFocus
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="correo@ejemplo.com" />
+            </div>
+            <button type="submit" disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
+              {loading ? "Enviando..." : "Enviar enlace"}
+            </button>
+            <button type="button" onClick={() => { setAdminStep("credentials"); setError(""); }}
+              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              ← Volver
+            </button>
+          </form>
+        )}
+
+        {tab === "admin" && adminStep === "forgot-sent" && (
+          <div className="text-center space-y-4">
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-4 rounded-xl text-sm">
+              Si el correo está registrado, recibirás las instrucciones en breve. Revisa también tu carpeta de spam.
+            </div>
+            <button onClick={() => { setAdminStep("credentials"); setError(""); }}
+              className="text-sm text-blue-600 hover:underline">
+              ← Volver al inicio de sesión
+            </button>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="correo@ejemplo.com" />
+        {/* ── USER FORMS ── */}
+        {tab === "user" && userStep === "credentials" && (
+          <div className="space-y-5">
+            {/* Email OTP option */}
+            <div>
+              <p className="text-xs text-gray-500 font-medium mb-2">Acceso con código por email</p>
+              <button type="button"
+                onClick={() => { setUserStep("otp-send"); setOtpEmail(""); setOtpCode(""); setError(""); }}
+                className="flex items-center justify-center gap-3 w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <span className="text-lg">✉️</span>
+                Continuar con código por email
+              </button>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+              <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">o con contraseña</span></div>
+            </div>
+            <form onSubmit={handleUserCredentials} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} required
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="correo@ejemplo.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                <input type="password" value={userPassword} onChange={(e) => setUserPassword(e.target.value)} required
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="••••••••" />
+              </div>
+              {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+              <button type="submit" disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
+                {loading ? "Entrando..." : "Entrar"}
+              </button>
+            </form>
+            <p className="text-center text-sm text-gray-500">
+              ¿No tienes cuenta?{" "}
+              <Link href={`/site/${slug}/portal/register`} className="text-blue-600 hover:underline font-medium">
+                Regístrate gratis
+              </Link>
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••" />
-          </div>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
-          )}
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
+        )}
 
-        {tab === "user" && (
-          <p className="text-center text-sm text-gray-500 mt-6">
-            ¿No tienes cuenta?{" "}
-            <Link href={`/site/${slug}/portal/register`} className="text-blue-600 hover:underline font-medium">
-              Regístrate gratis
-            </Link>
-          </p>
+        {tab === "user" && userStep === "otp-send" && (
+          <form onSubmit={handleOtpSend} className="space-y-4">
+            <div className="text-center mb-2">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">✉️</span>
+              </div>
+              <p className="text-sm text-gray-600">Ingresa tu email y te enviaremos un código de 6 dígitos</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={otpEmail} onChange={(e) => setOtpEmail(e.target.value)} required autoFocus
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="tu@gmail.com" />
+            </div>
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+            <button type="submit" disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
+              {loading ? "Enviando..." : "Enviar código"}
+            </button>
+            <button type="button" onClick={() => { setUserStep("credentials"); setError(""); }}
+              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              ← Volver
+            </button>
+          </form>
+        )}
+
+        {tab === "user" && userStep === "otp-verify" && (
+          <form onSubmit={handleOtpVerify} className="space-y-4">
+            <div className="text-center mb-2">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">📩</span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Enviamos un código a <strong>{otpEmail}</strong>. Ingresa el código de 6 dígitos.
+              </p>
+            </div>
+            <input
+              type="text" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+              required maxLength={6} autoFocus autoComplete="one-time-code"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest font-mono"
+              placeholder="000000"
+            />
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
+            <button type="submit" disabled={loading || otpCode.length < 6}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
+              {loading ? "Verificando..." : "Verificar código"}
+            </button>
+            <button type="button" onClick={() => { setUserStep("otp-send"); setOtpCode(""); setError(""); }}
+              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              Reenviar código
+            </button>
+          </form>
         )}
       </div>
     </div>

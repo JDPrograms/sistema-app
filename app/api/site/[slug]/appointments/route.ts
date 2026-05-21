@@ -25,15 +25,29 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const site = await prisma.site.findUnique({ where: { slug } });
   if (!site) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
-  const appointments = await prisma.siteAppointment.findMany({
-    where: {
-      siteId: site.id,
-      ...(status ? { status } : {}),
-      ...(date ? { date } : {}),
-    },
-    orderBy: [{ date: "asc" }, { time: "asc" }],
-  });
-  return NextResponse.json(appointments);
+  const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+  const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 25)));
+
+  const [appointments, total] = await Promise.all([
+    prisma.siteAppointment.findMany({
+      where: {
+        siteId: site.id,
+        ...(status ? { status } : {}),
+        ...(date ? { date } : {}),
+      },
+      orderBy: [{ date: "asc" }, { time: "asc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.siteAppointment.count({
+      where: {
+        siteId: site.id,
+        ...(status ? { status } : {}),
+        ...(date ? { date } : {}),
+      },
+    }),
+  ]);
+  return NextResponse.json({ data: appointments, total, page, limit });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -52,6 +66,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   }
 
   const service = serviceId ? site.services.find((s) => s.id === serviceId) : null;
+
+  // Conflict detection: same staff + same date + same time slot
+  if (body.staffId) {
+    const conflict = await prisma.siteAppointment.findFirst({
+      where: {
+        siteId: site.id,
+        staffId: body.staffId,
+        date,
+        time,
+        status: { notIn: ["cancelled"] },
+      },
+    });
+    if (conflict) {
+      return NextResponse.json(
+        { error: "El profesional ya tiene una cita en ese horario" },
+        { status: 409 }
+      );
+    }
+  }
 
   const appointment = await prisma.siteAppointment.create({
     data: {

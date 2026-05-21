@@ -94,6 +94,11 @@ export default function LoginPage() {
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors">
               {loading ? "Verificando..." : "Continuar"}
             </button>
+            <div className="text-center">
+              <a href="/admin/auth/forgot-password" className="text-sm text-gray-400 hover:text-blue-600 transition-colors">
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
           </form>
         )}
 

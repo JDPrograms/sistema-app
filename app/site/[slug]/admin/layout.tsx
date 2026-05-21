@@ -6,6 +6,7 @@ import { signOut } from "@/lib/auth";
 import AdminChat from "@/components/ai/AdminChat";
 import SiteAdminSidebar from "@/components/admin/SiteAdminSidebar";
 import { PushSubscriber } from "@/components/PushSubscriber";
+import NotificationBell from "@/components/admin/NotificationBell";
 
 function getExpiryStatus(site: { planType: string; expiresAt: Date | null; expiryReason: string | null }) {
   if (site.planType !== "timed" || !site.expiresAt) return null;
@@ -89,20 +90,40 @@ export default async function SiteAdminLayout({
 
   const navLinks = [
     { href: `/site/${slug}/admin`, label: "Dashboard" },
-    ...(show("appointments") ? [{ href: `/site/${slug}/admin/appointments`, label: "Citas" }] : []),
+    // Agenda y ventas
+    ...(show("appointments") ? [{ href: `/site/${slug}/admin/appointments`, label: "Citas 📅" }] : []),
+    ...(show("calendar")     ? [{ href: `/site/${slug}/admin/calendar`, label: "Calendario 🗓️" }] : []),
     ...(show("appointments") ? [{ href: `/site/${slug}/admin/staff`, label: "Personal" }] : []),
+    ...(show("appointments") ? [{ href: `/site/${slug}/admin/waiting-list`, label: "Lista de espera" }] : []),
     ...(show("products")     ? [{ href: `/site/${slug}/admin/products`, label: "Productos 📦" }] : []),
-    ...(show("content")      ? [{ href: `/site/${slug}/admin/content`, label: "Contenido" }] : []),
     ...(show("billing")      ? [{ href: `/site/${slug}/admin/billing`, label: "Contabilidad 🧾" }] : []),
-    ...(show("customize")    ? [{ href: `/site/${slug}/admin/customize`, label: "Personalizar" }] : []),
+    ...(show("coupons")      ? [{ href: `/site/${slug}/admin/coupons`, label: "Cupones 🎟️" }] : []),
+    ...(show("loyalty")      ? [{ href: `/site/${slug}/admin/loyalty`, label: "Lealtad ⭐" }] : []),
+    // Clientes y CRM
+    ...(show("users")        ? [{ href: `/site/${slug}/admin/users`, label: "Usuarios 👥" }] : []),
+    ...(show("crm")          ? [{ href: `/site/${slug}/admin/crm`, label: "CRM 🗂️" }] : []),
+    ...(show("reviews")      ? [{ href: `/site/${slug}/admin/reviews`, label: "Reseñas ⭐" }] : []),
+    ...(show("newsletter")   ? [{ href: `/site/${slug}/admin/newsletter`, label: "Newsletter 📧" }] : []),
+    // Contenido
+    ...(show("content")      ? [{ href: `/site/${slug}/admin/content`, label: "Contenido 📋" }] : []),
+    ...(show("gallery")      ? [{ href: `/site/${slug}/admin/gallery`, label: "Galería 🖼️" }] : []),
+    ...(show("blog")         ? [{ href: `/site/${slug}/admin/blog`, label: "Blog ✍️" }] : []),
+    ...(show("faq")          ? [{ href: `/site/${slug}/admin/faq`, label: "FAQ ❓" }] : []),
+    ...(show("customize")    ? [{ href: `/site/${slug}/admin/customize`, label: "Personalizar 🎨" }] : []),
     ...(show("customize")    ? [{ href: `/site/${slug}/admin/sections`, label: "Secciones ⟡" }] : []),
     ...(show("customize")    ? [{ href: `/site/${slug}/admin/builder`, label: "Constructor ✦" }] : []),
-    ...(show("ads")          ? [{ href: `/site/${slug}/admin/ads`, label: "Publicidades" }] : []),
-    ...(show("users")        ? [{ href: `/site/${slug}/admin/users`, label: "Usuarios" }] : []),
-    ...(show("ai")           ? [{ href: `/site/${slug}/admin/ai`, label: "IA" }] : []),
+    ...(show("ads")          ? [{ href: `/site/${slug}/admin/ads`, label: "Publicidades 📢" }] : []),
+    // Comunicacion
+    ...(show("ai")           ? [{ href: `/site/${slug}/admin/ai`, label: "IA 🤖" }] : []),
     ...(show("support")      ? [{ href: `/site/${slug}/admin/support`, label: "Soporte 💬" }] : []),
+    // Operaciones
+    ...(show("tasks")        ? [{ href: `/site/${slug}/admin/tasks`, label: "Tareas ✅" }] : []),
     ...(show("pwa")          ? [{ href: `/site/${slug}/admin/app`, label: "App Android 📲" }] : []),
+    // Admin
+    { href: `/site/${slug}/admin/reports`, label: "Reportes 📊" },
+    { href: `/site/${slug}/admin/audit-log`, label: "Actividad 📋" },
     { href: `/site/${slug}/admin/admins`, label: "Administradores" },
+    { href: `/site/${slug}/admin/security`, label: "Seguridad 🔐" },
   ];
 
   const signOutSlot = isSuperAdmin ? (
@@ -149,8 +170,9 @@ export default async function SiteAdminLayout({
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Mobile top spacer so hamburger button doesn't overlap content */}
-          <div className="md:hidden h-14 flex-shrink-0 bg-white border-b border-gray-100 flex items-center justify-center px-14">
+          <div className="md:hidden h-14 flex-shrink-0 bg-white border-b border-gray-100 flex items-center justify-between px-14 pr-4">
             <span className="font-semibold text-sm text-gray-700 truncate">{site.name}</span>
+            <NotificationBell slug={slug} />
           </div>
           <main className="flex-1 overflow-auto">{children}</main>
         </div>

@@ -112,6 +112,32 @@ export function verifyEmailHtml(data: { clientName: string; businessName: string
 </body></html>`;
 }
 
+export function passwordResetHtml(data: { name: string; resetUrl: string; expiresIn?: string }) {
+  const expires = data.expiresIn ?? "30 minutos";
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a">
+  <h2 style="color:#2563eb">🔑 Restablecer contraseña</h2>
+  <p>Hola <strong>${data.name}</strong>, recibimos una solicitud para restablecer tu contraseña.</p>
+  <p>Haz clic en el botón para crear una nueva contraseña:</p>
+  <p><a href="${data.resetUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Restablecer contraseña</a></p>
+  <p style="color:#6b7280;font-size:13px">Este enlace expira en <strong>${expires}</strong>. Si no solicitaste este cambio, puedes ignorar este correo.</p>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+  <p style="color:#9ca3af;font-size:12px">Sistema de Sistemas</p>
+</body></html>`;
+}
+
+export function emailOtpHtml(data: { code: string; purpose?: string }) {
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a">
+  <h2 style="color:#2563eb">Tu código de verificación</h2>
+  <p>Usa este código para verificar tu identidad. Expira en <strong>10 minutos</strong>.</p>
+  <div style="background:#f1f5f9;border-radius:12px;padding:24px;text-align:center;margin:24px 0">
+    <span style="font-size:40px;font-weight:800;letter-spacing:12px;font-family:monospace;color:#1e40af">${data.code}</span>
+  </div>
+  <p style="color:#6b7280;font-size:13px">Si no solicitaste este código, ignora este correo.</p>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+  <p style="color:#9ca3af;font-size:12px">Sistema de Sistemas</p>
+</body></html>`;
+}
+
 export function welcomeEmailHtml(data: { clientName: string; businessName: string; portalUrl?: string | null }) {
   return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a">
   <h2 style="color:#2563eb">👋 Bienvenido a ${data.businessName}</h2>

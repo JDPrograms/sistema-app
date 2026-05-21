@@ -70,6 +70,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         siteSlug: { label: "Site", type: "text" },
+        otp: { label: "Código MFA", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password || !credentials?.siteSlug) return null;
@@ -83,6 +84,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!admin) return null;
         const valid = await bcrypt.compare(credentials.password as string, admin.password);
         if (!valid) return null;
+        if (admin.mfaEnabled && admin.mfaSecret) {
+          const otp = credentials.otp as string | undefined;
+          if (!otp) return null;
+          const result = await totpVerify({ token: otp, secret: admin.mfaSecret });
+          if (!result.valid) return null;
+        }
         const perms = parseSitePerms(admin.permissions, admin.isOwner);
         return {
           id: admin.id,

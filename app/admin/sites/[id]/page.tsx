@@ -8,7 +8,7 @@ export default async function ManageSitePage({ params }: { params: Promise<{ id:
   const site = await prisma.site.findUnique({
     where: { id },
     include: {
-      admins: { select: { id: true, name: true, email: true, createdAt: true } },
+      admins: { select: { id: true, name: true, email: true, isOwner: true, permissions: true, createdAt: true } },
       _count: { select: { users: true } },
     },
   });

@@ -42,6 +42,50 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
     },
   });
 
+  // Auto-deduct product stock when invoice is marked as paid
+  if (nowPaid) {
+    const items: Array<{ productId?: string; description: string; qty: number }> =
+      JSON.parse(invoice.items || "[]");
+    const productItems = items.filter((it) => it.productId && it.qty > 0);
+    for (const item of productItems) {
+      const product = await prisma.siteProduct.findUnique({
+        where: { id: item.productId },
+        select: { id: true, name: true, stock: true },
+      });
+      if (!product || product.stock == null) continue;
+      const newStock = Math.max(0, product.stock - item.qty);
+      await prisma.$transaction([
+        prisma.siteProduct.update({
+          where: { id: product.id },
+          data: { stock: newStock },
+        }),
+        prisma.siteInventoryLog.create({
+          data: {
+            siteId: site.id,
+            productId: product.id,
+            productName: product.name,
+            type: "out",
+            quantity: item.qty,
+            previousStock: product.stock,
+            newStock,
+            reason: `Factura ${invoice.number}`,
+          },
+        }),
+      ]);
+    }
+
+    // In-app notification for paid invoice
+    prisma.siteNotification.create({
+      data: {
+        siteId: site.id,
+        title: "Factura pagada",
+        body: `${invoice.type === "quote" ? "Cotización" : "Factura"} #${invoice.number} — ${invoice.clientName} ($${invoice.total.toLocaleString("es")})`,
+        type: "success",
+        link: `/site/${slug}/admin/billing`,
+      },
+    }).catch(console.error);
+  }
+
   if (nowSent && invoice.clientEmail) {
     sendEmail({
       apiKey: site.emailApiKey,

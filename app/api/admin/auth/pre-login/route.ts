@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  if (!rateLimit(`pre-login:${ip}`, 5, 60_000)) {
+    return NextResponse.json({ valid: false }, { status: 429 });
+  }
+
   const { email, password } = await req.json();
   if (!email || !password) return NextResponse.json({ valid: false });
 

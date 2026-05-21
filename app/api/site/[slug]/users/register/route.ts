@@ -16,8 +16,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if (!name?.trim() || !email?.trim() || !password) {
     return NextResponse.json({ error: "Nombre, email y contraseña son requeridos" }, { status: 400 });
   }
-  if (password.length < 6) {
-    return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 });
+  if (password.length < 8) {
+    return NextResponse.json({ error: "La contraseña debe tener al menos 8 caracteres" }, { status: 400 });
+  }
+  if (!/[A-Z]/.test(password)) {
+    return NextResponse.json({ error: "La contraseña debe contener al menos una letra mayúscula" }, { status: 400 });
+  }
+  if (!/[0-9]/.test(password)) {
+    return NextResponse.json({ error: "La contraseña debe contener al menos un número" }, { status: 400 });
   }
 
   const normalizedEmail = email.trim().toLowerCase();

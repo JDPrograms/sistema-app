@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { chat, buildPublicContext, buildAdminContext } from "@/lib/ai";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +11,24 @@ export async function POST(req: Request) {
 
     if (!messages?.length) {
       return NextResponse.json({ error: "Mensajes requeridos" }, { status: 400 });
+    }
+
+    if (isAdmin) {
+      // Admin context requires an authenticated session
+      const session = await auth();
+      if (!session?.user) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+      }
+      const role = (session.user as any).role;
+      if (role !== "superadmin" && role !== "siteadmin") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+      }
+    } else {
+      // Public chat widgets: allow but rate-limit by IP (30 req/min)
+      const ip = getClientIp(req);
+      if (!rateLimit(`ai-chat:${ip}`, 30, 60_000)) {
+        return NextResponse.json({ error: "Demasiadas solicitudes. Intenta en un momento." }, { status: 429 });
+      }
     }
 
     let systemPrompt = "Eres un asistente util y amable para la gestion de este negocio. Responde en español, texto plano sin markdown ni listas. Respuestas cortas y directas.";

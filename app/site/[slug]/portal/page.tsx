@@ -2,6 +2,7 @@ import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import CancelAppointmentButton from "./CancelAppointmentButton";
 
 export default async function PortalPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -41,8 +42,8 @@ export default async function PortalPage({ params }: { params: Promise<{ slug: s
   if (!user || !site) redirect(`/site/${slug}/login`);
 
   const mods = JSON.parse(site.modules || "{}");
-  const showAppointments = mods.appointments === true && appointments.length > 0;
-  const showBilling = mods.billing === true && invoices.length > 0;
+  const showAppointments = mods.appointments === true;
+  const showBilling = mods.billing === true;
   const primaryColor = site.primaryColor ?? "#3b82f6";
 
   const statusLabel: Record<string, string> = {
@@ -68,18 +69,29 @@ export default async function PortalPage({ params }: { params: Promise<{ slug: s
               <p className="text-xs text-gray-500">{site.name}</p>
             </div>
           </div>
-          <form action={async () => { "use server"; await signOut({ redirectTo: `/site/${slug}/login` }); }}>
-            <button type="submit" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
-              Cerrar sesión
-            </button>
-          </form>
+          <div className="flex items-center gap-4">
+            <Link href={`/site/${slug}/portal/profile`} className="text-xs text-gray-500 hover:text-blue-600 transition-colors">
+              Mi perfil
+            </Link>
+            <form action={async () => { "use server"; await signOut({ redirectTo: `/site/${slug}/login` }); }}>
+              <button type="submit" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
+                Cerrar sesión
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         {/* Profile Card */}
         <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Mi perfil</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Mi perfil</h2>
+            <Link href={`/site/${slug}/portal/profile`}
+              className="text-sm text-blue-600 hover:underline font-medium">
+              Editar
+            </Link>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div>
               <p className="text-gray-400 text-xs mb-1">Nombre</p>
@@ -100,24 +112,33 @@ export default async function PortalPage({ params }: { params: Promise<{ slug: s
         {showAppointments && (
           <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Mis citas</h2>
-            <div className="space-y-3">
-              {appointments.map((a) => (
-                <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl text-sm">
-                  <div>
-                    <p className="font-medium text-gray-900">{a.serviceName || "Cita"}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{a.date} {a.time}{a.staffName ? ` · ${a.staffName}` : ""}</p>
+            {appointments.length === 0 ? (
+              <p className="text-sm text-gray-400">No tienes citas registradas.</p>
+            ) : (
+              <div className="space-y-3">
+                {appointments.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl text-sm">
+                    <div>
+                      <p className="font-medium text-gray-900">{a.serviceName || "Cita"}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{a.date} {a.time}{a.staffName ? ` · ${a.staffName}` : ""}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        a.status === "confirmed" ? "bg-green-100 text-green-700" :
+                        a.status === "cancelled" ? "bg-red-100 text-red-600" :
+                        a.status === "completed" ? "bg-blue-100 text-blue-700" :
+                        "bg-amber-100 text-amber-700"
+                      }`}>
+                        {statusLabel[a.status] ?? a.status}
+                      </span>
+                      {(a.status === "pending" || a.status === "confirmed") && (
+                        <CancelAppointmentButton appointmentId={a.id} slug={slug} />
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    a.status === "confirmed" ? "bg-green-100 text-green-700" :
-                    a.status === "cancelled" ? "bg-red-100 text-red-600" :
-                    a.status === "completed" ? "bg-blue-100 text-blue-700" :
-                    "bg-amber-100 text-amber-700"
-                  }`}>
-                    {statusLabel[a.status] ?? a.status}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
@@ -125,26 +146,32 @@ export default async function PortalPage({ params }: { params: Promise<{ slug: s
         {showBilling && (
           <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Mis facturas</h2>
-            <div className="space-y-3">
-              {invoices.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl text-sm">
-                  <div>
-                    <p className="font-medium text-gray-900">{inv.type === "quote" ? "Cotización" : "Factura"} #{inv.number}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{new Date(inv.createdAt).toLocaleDateString("es")}</p>
+            {invoices.length === 0 ? (
+              <p className="text-sm text-gray-400">No tienes facturas registradas.</p>
+            ) : (
+              <div className="space-y-3">
+                {invoices.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl text-sm">
+                    <div>
+                      <p className="font-medium text-gray-900">{inv.type === "quote" ? "Cotización" : "Factura"} #{inv.number}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{new Date(inv.createdAt).toLocaleDateString("es")}</p>
+                    </div>
+                    <div className="text-right flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold text-gray-900">${inv.total.toLocaleString("es")}</p>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          inv.status === "paid" ? "bg-green-100 text-green-700" :
+                          inv.status === "cancelled" ? "bg-red-100 text-red-600" :
+                          "bg-gray-100 text-gray-600"
+                        }`}>
+                          {invoiceStatusLabel[inv.status] ?? inv.status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">${inv.total.toLocaleString("es")}</p>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      inv.status === "paid" ? "bg-green-100 text-green-700" :
-                      inv.status === "cancelled" ? "bg-red-100 text-red-600" :
-                      "bg-gray-100 text-gray-600"
-                    }`}>
-                      {invoiceStatusLabel[inv.status] ?? inv.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
