@@ -50,6 +50,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
   if (body.seoDescription !== undefined) data.seoDescription = body.seoDescription ?? null;
   if (body.emailFrom !== undefined) data.emailFrom = body.emailFrom ?? null;
   if (body.emailApiKey !== undefined && body.emailApiKey.trim()) data.emailApiKey = body.emailApiKey.trim();
+  if (body.template !== undefined) data.template = body.template;
   // Extract pageBlocks and layoutConfig to handle via raw SQL (avoids Prisma binary schema mismatch)
   const pageBlocksValue = body.pageBlocks !== undefined
     ? (typeof body.pageBlocks === "string" ? body.pageBlocks : JSON.stringify(body.pageBlocks ?? []))

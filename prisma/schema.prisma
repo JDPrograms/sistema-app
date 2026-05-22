@@ -23,14 +23,17 @@ model SuperAdmin {
 
 model AiProvider {
   id        String   @id @default(cuid())
-  name      String   @unique // "gemini" | "groq" | "openai" | "anthropic"
+  name      String   // "gemini" | "groq" | "openai" | "anthropic"
   label     String
   apiKey    String   @default("")
   model     String   @default("")
   isActive  Boolean  @default(false)
   priority  Int      @default(0)
+  scope     String   @default("global") // "global" | "superadmin"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([name, scope])
 }
 
 model AiAgent {
@@ -96,7 +99,8 @@ model Site {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  billingConfig  String   @default("{}")
+  billingConfig         String   @default("{}")
+  onboardingCompleted   Boolean  @default(false)
 
   admins         SiteAdmin[]
   users          SiteUser[]

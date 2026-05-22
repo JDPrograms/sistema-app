@@ -25,14 +25,14 @@ async function main() {
   const groqKey = process.env.GROQ_API_KEY ?? "";
 
   const gemini = await prisma.aiProvider.upsert({
-    where: { name: "gemini" },
-    create: { name: "gemini", label: "Google Gemini", priority: 0, isActive: !!geminiKey, apiKey: geminiKey },
+    where: { name_scope: { name: "gemini", scope: "global" } },
+    create: { name: "gemini", label: "Google Gemini", priority: 0, isActive: !!geminiKey, apiKey: geminiKey, scope: "global" },
     update: geminiKey ? { apiKey: geminiKey, isActive: true } : {},
   });
 
   const groq = await prisma.aiProvider.upsert({
-    where: { name: "groq" },
-    create: { name: "groq", label: "Groq", priority: 1, isActive: !!groqKey, apiKey: groqKey },
+    where: { name_scope: { name: "groq", scope: "global" } },
+    create: { name: "groq", label: "Groq", priority: 1, isActive: !!groqKey, apiKey: groqKey, scope: "global" },
     update: groqKey ? { apiKey: groqKey, isActive: true } : {},
   });
 

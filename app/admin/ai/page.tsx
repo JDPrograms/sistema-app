@@ -66,6 +66,8 @@ const ALL_PROVIDER_OPTIONS = PROVIDERS.map((p) => ({ value: p.name, label: p.lab
 
 export default function AdminAiPage() {
   const [tab, setTab] = useState<"providers" | "agents">("providers");
+  // "global" = used by sites, "superadmin" = used only by the superadmin console (Director IA)
+  const [providerScope, setProviderScope] = useState<"global" | "superadmin">("global");
   const [providers, setProviders] = useState<Provider[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,35 +80,39 @@ export default function AdminAiPage() {
   const [savingAgent, setSavingAgent] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
 
-  async function loadAll() {
+  async function loadAll(scope = providerScope) {
     setLoading(true);
-    const [pRes, aRes] = await Promise.all([fetch("/api/admin/ai/providers"), fetch("/api/admin/ai/agents")]);
+    const [pRes, aRes] = await Promise.all([
+      fetch(`/api/admin/ai/providers?scope=${scope}`),
+      fetch("/api/admin/ai/agents"),
+    ]);
     if (pRes.ok) {
       const data: Provider[] = await pRes.json();
       setProviders(data);
       const modelMap: Record<string, string> = {};
-      data.forEach((p) => { modelMap[p.name] = p.model; });
+      data.forEach((p) => { modelMap[`${p.name}_${scope}`] = p.model; });
       setEditModel(modelMap);
     }
     if (aRes.ok) setAgents(await aRes.json());
     setLoading(false);
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(providerScope); }, [providerScope]);
 
   async function saveProvider(def: ProviderDef, key: string, model: string, isActive: boolean) {
-    setSaving(def.name);
+    const saveKey = `${def.name}_${providerScope}`;
+    setSaving(saveKey);
     setSavedMsg(null);
     const res = await fetch("/api/admin/ai/providers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: def.name, label: def.label, apiKey: key, model, isActive, priority: def.priority }),
+      body: JSON.stringify({ name: def.name, label: def.label, apiKey: key, model, isActive, priority: def.priority, scope: providerScope }),
     });
     setSaving(null);
     if (res.ok) {
-      setSavedMsg(def.name);
-      loadAll();
-      setEditKey((prev) => ({ ...prev, [def.name]: "" }));
+      setSavedMsg(saveKey);
+      loadAll(providerScope);
+      setEditKey((prev) => ({ ...prev, [saveKey]: "" }));
       setTimeout(() => setSavedMsg(null), 2500);
     }
   }
@@ -174,12 +180,26 @@ export default function AdminAiPage() {
         <div className="text-center py-16 text-gray-400">Cargando...</div>
       ) : tab === "providers" ? (
         <div className="space-y-4">
+          {/* Scope tabs */}
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+            {(["global", "superadmin"] as const).map((s) => (
+              <button key={s} onClick={() => setProviderScope(s)}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${providerScope === s ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                {s === "global" ? "IA Global (sitios)" : "IA SuperAdmin (consola)"}
+              </button>
+            ))}
+          </div>
+
           <p className="text-sm text-gray-500 bg-blue-50 border border-blue-200 rounded-xl p-4">
-            Configura las API keys de los proveedores. El sistema usará el de mayor prioridad y cambiará automáticamente al siguiente si alcanza el límite. Puedes activar varios a la vez como respaldo.
+            {providerScope === "global"
+              ? "Proveedores usados por los agentes de los sitios (chat público, asistente admin). El sistema usará el de mayor prioridad y cambiará al siguiente si alcanza el límite."
+              : "Proveedores exclusivos para el Director IA de esta consola. Las API keys aquí no afectan a ningún sitio. Configura proveedores separados para uso interno."}
           </p>
+
           {PROVIDERS.map((def) => {
+            const scopeKey = `${def.name}_${providerScope}`;
             const existing = providers.find((p) => p.name === def.name);
-            const currentModel = editModel[def.name] ?? existing?.model ?? def.defaultModel;
+            const currentModel = editModel[scopeKey] ?? existing?.model ?? def.defaultModel;
             return (
               <div key={def.name} className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -223,8 +243,8 @@ export default function AdminAiPage() {
                     </label>
                     <input
                       type="password"
-                      value={editKey[def.name] ?? ""}
-                      onChange={(e) => setEditKey((prev) => ({ ...prev, [def.name]: e.target.value }))}
+                      value={editKey[scopeKey] ?? ""}
+                      onChange={(e) => setEditKey((prev) => ({ ...prev, [scopeKey]: e.target.value }))}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder={existing?.hasKey ? "••••••••••••••••" : "Pega tu API key aquí"}
                     />
@@ -233,7 +253,7 @@ export default function AdminAiPage() {
                     <label className="block text-xs text-gray-500 mb-1">Modelo</label>
                     <select
                       value={currentModel}
-                      onChange={(e) => setEditModel((prev) => ({ ...prev, [def.name]: e.target.value }))}
+                      onChange={(e) => setEditModel((prev) => ({ ...prev, [scopeKey]: e.target.value }))}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {def.models.map((m) => (
@@ -245,13 +265,13 @@ export default function AdminAiPage() {
 
                 <div className="flex items-center justify-between">
                   <button
-                    onClick={() => saveProvider(def, editKey[def.name] ?? "", currentModel, existing?.isActive ?? false)}
-                    disabled={saving === def.name}
+                    onClick={() => saveProvider(def, editKey[scopeKey] ?? "", currentModel, existing?.isActive ?? false)}
+                    disabled={saving === scopeKey}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    {saving === def.name ? "Guardando..." : "Guardar cambios"}
+                    {saving === scopeKey ? "Guardando..." : "Guardar cambios"}
                   </button>
-                  {savedMsg === def.name && <span className="text-xs text-green-600 font-medium">✓ Guardado</span>}
+                  {savedMsg === scopeKey && <span className="text-xs text-green-600 font-medium">✓ Guardado</span>}
                 </div>
               </div>
             );

@@ -77,10 +77,11 @@ function isRateLimit(e: unknown): boolean {
 export async function chat(
   messages: Message[],
   systemPrompt: string,
-  preferredProvider?: string | null
+  preferredProvider?: string | null,
+  scope: "global" | "superadmin" = "global"
 ): Promise<ChatResult> {
   const providers = await prisma.aiProvider.findMany({
-    where: { isActive: true, NOT: { apiKey: "" } },
+    where: { isActive: true, NOT: { apiKey: "" }, scope },
     orderBy: { priority: "asc" },
   });
 

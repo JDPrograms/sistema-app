@@ -139,7 +139,7 @@ ESTADO ACTUAL DE LA PLATAFORMA:
 ${platformContext}`;
 
   try {
-    const result = await chat(messages, systemPrompt);
+    const result = await chat(messages, systemPrompt, null, "superadmin");
     return NextResponse.json({ text: result.text, provider: result.provider });
   } catch (e: any) {
     return NextResponse.json({ error: e.message ?? "Error de IA" }, { status: 500 });

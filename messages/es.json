@@ -1,0 +1,105 @@
+{
+  "nav": {
+    "features": "Características",
+    "templates": "Plantillas",
+    "pricing": "Precios",
+    "login": "Iniciar sesión",
+    "start": "Comenzar gratis"
+  },
+  "hero": {
+    "badge": "Plataforma multi-negocio todo-en-uno",
+    "title1": "Lanza tu negocio digital",
+    "title2": "en minutos",
+    "subtitle": "Crea sitios web profesionales, gestiona citas, ventas y clientes — sin código, sin complicaciones. Todo lo que necesita tu negocio en un solo lugar.",
+    "cta_primary": "Comenzar gratis →",
+    "cta_secondary": "Ver características",
+    "note": "Sin tarjeta de crédito · Configuración en 5 minutos"
+  },
+  "stats": {
+    "businesses": "Negocios activos",
+    "appointments": "Citas gestionadas",
+    "templates": "Plantillas de diseño",
+    "uptime": "Disponibilidad"
+  },
+  "features": {
+    "title": "Todo lo que necesitas",
+    "subtitle": "Una plataforma completa para gestionar, crecer y digitalizar cualquier tipo de negocio.",
+    "items": [
+      { "icon": "📅", "title": "Citas y reservas", "desc": "Calendario inteligente, selección de profesionales, horarios y confirmaciones automáticas por email." },
+      { "icon": "🛍️", "title": "Tienda y catálogo", "desc": "Gestiona productos, inventario, precios y órdenes desde un panel intuitivo." },
+      { "icon": "👥", "title": "CRM de clientes", "desc": "Historial completo por cliente, notas internas, puntos de lealtad y segmentación avanzada." },
+      { "icon": "📧", "title": "Email marketing", "desc": "Newsletters, campañas automáticas y seguimiento de aperturas para fidelizar más clientes." },
+      { "icon": "✍️", "title": "Blog y contenido", "desc": "Publica artículos, FAQs y galería de fotos para posicionarte en Google." },
+      { "icon": "📊", "title": "Reportes y analytics", "desc": "Visualiza ingresos, citas, clientes nuevos y tendencias con gráficas en tiempo real." }
+    ]
+  },
+  "how": {
+    "title": "En 3 pasos simples",
+    "subtitle": "Tu negocio online funcionando en menos de una hora.",
+    "steps": [
+      { "n": "01", "icon": "🏗️", "title": "Crea tu sitio", "desc": "Elige una plantilla, personaliza colores, logo y contenido con la información de tu negocio." },
+      { "n": "02", "icon": "⚙️", "title": "Configura módulos", "desc": "Activa citas, tienda, blog, CRM — solo los módulos que necesites para tu negocio." },
+      { "n": "03", "icon": "🚀", "title": "Comparte y crece", "desc": "Comparte tu enlace, empieza a recibir clientes y gestiona todo desde tu panel." }
+    ]
+  },
+  "templates": {
+    "title": "Plantillas por industria",
+    "subtitle": "17 diseños profesionales adaptados a cada tipo de negocio, listos para usar.",
+    "more": "Y 11 más: Veterinaria, Farmacia, Fotografía, Hotel, Abogados, Gym, Ferretería...",
+    "items": [
+      { "emoji": "✂️", "name": "Barbería & Salón", "desc": "Citas por estilista, galería de trabajos, reseñas de clientes" },
+      { "emoji": "🏥", "name": "Clínica & Salud", "desc": "Agenda médica, historial de pacientes, personal de salud" },
+      { "emoji": "🍕", "name": "Restaurante & Café", "desc": "Menú digital, pedidos online, reservas de mesa" },
+      { "emoji": "💪", "name": "Gimnasio & Fitness", "desc": "Membresías, clases, rutinas y seguimiento de progreso" },
+      { "emoji": "🏫", "name": "Escuela & Tutorías", "desc": "Cursos, horarios, alumnos y calificaciones" },
+      { "emoji": "🏠", "name": "Inmobiliaria", "desc": "Listado de propiedades, tours virtuales, captación de leads" }
+    ]
+  },
+  "pricing": {
+    "title": "Planes y precios",
+    "subtitle": "Empieza gratis, escala cuando lo necesites.",
+    "popular": "MÁS POPULAR",
+    "plans": [
+      {
+        "name": "Básico",
+        "price": "Gratis",
+        "period": "",
+        "desc": "Para empezar tu negocio digital",
+        "features": ["1 sitio web", "50 citas / mes", "100 productos", "Chat con clientes", "Plantillas incluidas"],
+        "cta": "Empezar gratis",
+        "highlight": false
+      },
+      {
+        "name": "Pro",
+        "price": "$29",
+        "period": "/mes",
+        "desc": "Para negocios en crecimiento",
+        "features": ["5 sitios web", "Citas ilimitadas", "Productos ilimitados", "Email marketing", "Reportes avanzados", "Soporte prioritario"],
+        "cta": "Comenzar prueba gratis",
+        "highlight": true
+      },
+      {
+        "name": "Empresa",
+        "price": "Custom",
+        "period": "",
+        "desc": "Para operaciones a gran escala",
+        "features": ["Sitios ilimitados", "White-label", "API personalizada", "Integraciones avanzadas", "SLA garantizado", "Gestor de cuenta dedicado"],
+        "cta": "Contactar ventas",
+        "highlight": false
+      }
+    ]
+  },
+  "cta": {
+    "title": "¿Listo para crecer?",
+    "subtitle": "Únete a cientos de negocios que ya digitalizaron sus operaciones con Sistema de Sistemas.",
+    "button": "Comenzar ahora gratis →",
+    "note": "Sin compromisos. Cancela cuando quieras."
+  },
+  "footer": {
+    "tagline": "La plataforma todo-en-uno para digitalizar cualquier negocio, sin código.",
+    "product": "Producto",
+    "access": "Acceso",
+    "directory": "Directorio de negocios",
+    "copyright": "Todos los derechos reservados."
+  }
+}

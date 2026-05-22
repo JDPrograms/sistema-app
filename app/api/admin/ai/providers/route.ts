@@ -6,7 +6,12 @@ export const GET = auth(async (req) => {
   if (!req.auth || (req.auth.user as any).role !== "superadmin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
-  const providers = await prisma.aiProvider.findMany({ orderBy: { priority: "asc" } });
+  const url = new URL(req.url);
+  const scope = url.searchParams.get("scope") ?? undefined;
+  const providers = await prisma.aiProvider.findMany({
+    where: scope ? { scope } : undefined,
+    orderBy: [{ scope: "asc" }, { priority: "asc" }],
+  });
   return NextResponse.json(providers.map((p) => ({ ...p, hasKey: p.apiKey.length > 0, apiKey: undefined })));
 });
 
@@ -15,10 +20,19 @@ export const POST = auth(async (req) => {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const body = await req.json();
+  const scope: string = body.scope ?? "global";
   const hasNewKey = typeof body.apiKey === "string" && body.apiKey.trim().length > 0;
   const provider = await prisma.aiProvider.upsert({
-    where: { name: body.name },
-    create: { name: body.name, label: body.label, apiKey: body.apiKey ?? "", model: body.model ?? "", isActive: body.isActive ?? false, priority: body.priority ?? 0 },
+    where: { name_scope: { name: body.name, scope } },
+    create: {
+      name: body.name,
+      label: body.label,
+      apiKey: body.apiKey ?? "",
+      model: body.model ?? "",
+      isActive: body.isActive ?? false,
+      priority: body.priority ?? 0,
+      scope,
+    },
     update: {
       label: body.label,
       model: body.model ?? "",

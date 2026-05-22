@@ -1,0 +1,105 @@
+{
+  "nav": {
+    "features": "Features",
+    "templates": "Templates",
+    "pricing": "Pricing",
+    "login": "Sign in",
+    "start": "Get started free"
+  },
+  "hero": {
+    "badge": "All-in-one multi-business platform",
+    "title1": "Launch your digital business",
+    "title2": "in minutes",
+    "subtitle": "Create professional websites, manage appointments, sales and clients — no code, no hassle. Everything your business needs in one place.",
+    "cta_primary": "Get started free →",
+    "cta_secondary": "See features",
+    "note": "No credit card required · Set up in 5 minutes"
+  },
+  "stats": {
+    "businesses": "Active businesses",
+    "appointments": "Appointments managed",
+    "templates": "Design templates",
+    "uptime": "Uptime"
+  },
+  "features": {
+    "title": "Everything you need",
+    "subtitle": "A complete platform to manage, grow and digitize any type of business.",
+    "items": [
+      { "icon": "📅", "title": "Appointments & bookings", "desc": "Smart calendar, staff selection, schedules and automatic email confirmations." },
+      { "icon": "🛍️", "title": "Store & catalog", "desc": "Manage products, inventory, prices and orders from an intuitive dashboard." },
+      { "icon": "👥", "title": "Client CRM", "desc": "Full history per client, internal notes, loyalty points and advanced segmentation." },
+      { "icon": "📧", "title": "Email marketing", "desc": "Newsletters, automated campaigns and open tracking to retain more clients." },
+      { "icon": "✍️", "title": "Blog & content", "desc": "Publish articles, FAQs and photo galleries to rank higher on Google." },
+      { "icon": "📊", "title": "Reports & analytics", "desc": "Visualize revenue, appointments, new clients and trends with real-time charts." }
+    ]
+  },
+  "how": {
+    "title": "3 simple steps",
+    "subtitle": "Your online business up and running in under an hour.",
+    "steps": [
+      { "n": "01", "icon": "🏗️", "title": "Create your site", "desc": "Choose a template, customize colors, logo and content with your business info." },
+      { "n": "02", "icon": "⚙️", "title": "Configure modules", "desc": "Enable appointments, store, blog, CRM — only the modules your business needs." },
+      { "n": "03", "icon": "🚀", "title": "Share and grow", "desc": "Share your link, start receiving clients and manage everything from your dashboard." }
+    ]
+  },
+  "templates": {
+    "title": "Templates by industry",
+    "subtitle": "17 professional designs tailored to every business type, ready to use.",
+    "more": "And 11 more: Veterinary, Pharmacy, Photography, Hotel, Law firm, Gym, Hardware...",
+    "items": [
+      { "emoji": "✂️", "name": "Barbershop & Salon", "desc": "Appointments per stylist, portfolio gallery, client reviews" },
+      { "emoji": "🏥", "name": "Clinic & Health", "desc": "Medical schedule, patient history, health staff" },
+      { "emoji": "🍕", "name": "Restaurant & Café", "desc": "Digital menu, online orders, table reservations" },
+      { "emoji": "💪", "name": "Gym & Fitness", "desc": "Memberships, classes, routines and progress tracking" },
+      { "emoji": "🏫", "name": "School & Tutoring", "desc": "Courses, schedules, students and grades" },
+      { "emoji": "🏠", "name": "Real Estate", "desc": "Property listings, virtual tours, lead capture" }
+    ]
+  },
+  "pricing": {
+    "title": "Plans & pricing",
+    "subtitle": "Start free, scale when you need.",
+    "popular": "MOST POPULAR",
+    "plans": [
+      {
+        "name": "Basic",
+        "price": "Free",
+        "period": "",
+        "desc": "To start your digital business",
+        "features": ["1 website", "50 appointments / month", "100 products", "Client chat", "Templates included"],
+        "cta": "Start free",
+        "highlight": false
+      },
+      {
+        "name": "Pro",
+        "price": "$29",
+        "period": "/mo",
+        "desc": "For growing businesses",
+        "features": ["5 websites", "Unlimited appointments", "Unlimited products", "Email marketing", "Advanced reports", "Priority support"],
+        "cta": "Start free trial",
+        "highlight": true
+      },
+      {
+        "name": "Enterprise",
+        "price": "Custom",
+        "period": "",
+        "desc": "For large-scale operations",
+        "features": ["Unlimited sites", "White-label", "Custom API", "Advanced integrations", "Guaranteed SLA", "Dedicated account manager"],
+        "cta": "Contact sales",
+        "highlight": false
+      }
+    ]
+  },
+  "cta": {
+    "title": "Ready to grow?",
+    "subtitle": "Join hundreds of businesses that already digitized their operations with Sistema de Sistemas.",
+    "button": "Start now for free →",
+    "note": "No commitments. Cancel anytime."
+  },
+  "footer": {
+    "tagline": "The all-in-one platform to digitize any business, without code.",
+    "product": "Product",
+    "access": "Access",
+    "directory": "Business Directory",
+    "copyright": "All rights reserved."
+  }
+}

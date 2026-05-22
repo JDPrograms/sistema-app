@@ -24,7 +24,7 @@ const COLOR_PRESETS = [
   { label: "Gris oscuro",  primary: "#374151", secondary: "#111827" },
 ];
 
-type Tab = "apariencia" | "contacto" | "redes" | "horarios" | "seo" | "email";
+type Tab = "apariencia" | "contacto" | "redes" | "horarios" | "seo" | "email" | "plantilla";
 
 interface HourRow { day: string; isOpen: boolean; open: string; close: string; }
 interface SocialLinks { instagram: string; facebook: string; twitter: string; tiktok: string; youtube: string; }
@@ -59,6 +59,8 @@ export default function CustomizePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [currentTemplate, setCurrentTemplate] = useState("generic");
+  const [templateSaving, setTemplateSaving] = useState(false);
 
   useEffect(() => {
     fetch(`/api/site/${slug}/customize`).then(async (r) => {
@@ -71,6 +73,7 @@ export default function CustomizePage() {
           const parsed = JSON.parse(d.businessHours || "[]");
           if (Array.isArray(parsed) && parsed.length === 7) businessHours = parsed;
         } catch {}
+        setCurrentTemplate(d.template || "generic");
         setForm({
           name: d.name || "",
           description: d.description || "",
@@ -126,13 +129,53 @@ export default function CustomizePage() {
     if (res.ok) setTimeout(() => setMsg(null), 3000);
   }
 
+  const TEMPLATES_LIST = [
+    { id: "generic",      emoji: "🌐", name: "Genérico",       desc: "Diseño versátil para cualquier negocio", colors: { p: "#3b82f6", s: "#1e40af" } },
+    { id: "barbershop",   emoji: "✂️", name: "Barbería",        desc: "Citas por estilista, galería de trabajos", colors: { p: "#1a1a2e", s: "#16213e" } },
+    { id: "salon",        emoji: "💇", name: "Salón de belleza", desc: "Servicios de belleza y cuidado personal", colors: { p: "#db2777", s: "#831843" } },
+    { id: "clinic",       emoji: "🏥", name: "Clínica",          desc: "Agenda médica, historial de pacientes",  colors: { p: "#0891b2", s: "#0e7490" } },
+    { id: "restaurant",   emoji: "🍕", name: "Restaurante",      desc: "Menú digital, pedidos online",           colors: { p: "#dc2626", s: "#991b1b" } },
+    { id: "cafeteria",    emoji: "☕", name: "Cafetería",         desc: "Carta de bebidas y alimentos",           colors: { p: "#92400e", s: "#451a03" } },
+    { id: "gym",          emoji: "💪", name: "Gimnasio",          desc: "Membresías, clases, rutinas",            colors: { p: "#ea580c", s: "#7c2d12" } },
+    { id: "school",       emoji: "🏫", name: "Escuela",           desc: "Cursos, horarios, alumnos",              colors: { p: "#4f46e5", s: "#3730a3" } },
+    { id: "store",        emoji: "🛍️", name: "Tienda",            desc: "Catálogo de productos, carrito",         colors: { p: "#16a34a", s: "#14532d" } },
+    { id: "hardware",     emoji: "🔧", name: "Ferretería",        desc: "Inventario, productos, cotizaciones",    colors: { p: "#374151", s: "#111827" } },
+    { id: "veterinary",   emoji: "🐾", name: "Veterinaria",       desc: "Citas para mascotas, historial",         colors: { p: "#059669", s: "#064e3b" } },
+    { id: "pharmacy",     emoji: "💊", name: "Farmacia",           desc: "Catálogo de medicamentos, pedidos",      colors: { p: "#0284c7", s: "#075985" } },
+    { id: "lawyer",       emoji: "⚖️", name: "Abogados",           desc: "Consultas, áreas de práctica",          colors: { p: "#1e3a5f", s: "#0f1f3d" } },
+    { id: "realestate",   emoji: "🏠", name: "Inmobiliaria",       desc: "Propiedades, tours virtuales, leads",    colors: { p: "#b45309", s: "#78350f" } },
+    { id: "hotel",        emoji: "🏨", name: "Hotel",              desc: "Habitaciones, reservas, servicios",      colors: { p: "#7c3aed", s: "#4c1d95" } },
+    { id: "photographer", emoji: "📷", name: "Fotografía",         desc: "Portafolio, sesiones, galería",          colors: { p: "#0f172a", s: "#020617" } },
+    { id: "tutor",        emoji: "📚", name: "Tutorías",            desc: "Clases, materias, agenda de sesiones",   colors: { p: "#8b5cf6", s: "#5b21b6" } },
+  ];
+
+  async function applyTemplate(tplId: string, colors?: { p: string; s: string }) {
+    if (!confirm("¿Cambiar la plantilla del sitio? Se mantendrá toda tu información.")) return;
+    setTemplateSaving(true);
+    const body: any = { template: tplId };
+    if (colors) { body.primaryColor = colors.p; body.secondaryColor = colors.s; }
+    const res = await fetch(`/api/site/${slug}/customize`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      setCurrentTemplate(tplId);
+      if (colors) { setForm((p) => ({ ...p, primaryColor: colors.p, secondaryColor: colors.s })); }
+      setMsg({ text: "Plantilla aplicada correctamente", ok: true });
+      setTimeout(() => setMsg(null), 3000);
+    }
+    setTemplateSaving(false);
+  }
+
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "apariencia", label: "Apariencia", icon: "🎨" },
-    { id: "contacto",   label: "Contacto",   icon: "📞" },
+    { id: "plantilla",  label: "Plantilla",    icon: "🖼️" },
+    { id: "apariencia", label: "Apariencia",   icon: "🎨" },
+    { id: "contacto",   label: "Contacto",     icon: "📞" },
     { id: "redes",      label: "Redes sociales", icon: "🔗" },
-    { id: "horarios",   label: "Horarios",    icon: "🕐" },
-    { id: "seo",        label: "SEO",         icon: "🔍" },
-    { id: "email",      label: "Email",       icon: "📧" },
+    { id: "horarios",   label: "Horarios",     icon: "🕐" },
+    { id: "seo",        label: "SEO",          icon: "🔍" },
+    { id: "email",      label: "Email",        icon: "📧" },
   ];
 
   const inp = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -157,6 +200,60 @@ export default function CustomizePage() {
           </button>
         ))}
       </div>
+
+      {/* ===== PLANTILLA (outside form — has its own save) ===== */}
+      {tab === "plantilla" && (
+        <div className="space-y-5">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-5">
+            <h2 className="font-semibold text-gray-900 dark:text-white mb-1">Diseño de tu sitio</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">
+              Cada plantilla está optimizada para un tipo de negocio. Puedes cambiarla en cualquier momento sin perder tu información.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {TEMPLATES_LIST.map((t) => {
+                const active = currentTemplate === t.id;
+                return (
+                  <div key={t.id}
+                    className={`relative border-2 rounded-xl p-4 transition-all cursor-pointer ${
+                      active
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                        : "border-gray-100 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 bg-white dark:bg-slate-900"
+                    }`}
+                    onClick={() => !active && applyTemplate(t.id, t.colors)}>
+                    {active && (
+                      <span className="absolute top-2.5 right-2.5 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        ACTIVA
+                      </span>
+                    )}
+                    <div className="flex items-start gap-3">
+                      <span className="text-3xl leading-none flex-shrink-0">{t.emoji}</span>
+                      <div className="min-w-0">
+                        <p className={`font-semibold text-sm ${active ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-white"}`}>
+                          {t.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{t.desc}</p>
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <span className="w-4 h-4 rounded-full border border-white/50 shadow-sm flex-shrink-0"
+                            style={{ backgroundColor: t.colors.p }} />
+                          <span className="text-[10px] text-gray-400 dark:text-slate-500">Colores sugeridos</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {templateSaving && (
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-3 text-center">Aplicando plantilla...</p>
+            )}
+            {msg && tab === "plantilla" && (
+              <p className={`text-sm font-medium mt-3 text-center ${msg.ok ? "text-green-600" : "text-red-600"}`}>
+                {msg.ok ? "✓" : "✕"} {msg.text}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="space-y-5">
 
@@ -518,17 +615,19 @@ export default function CustomizePage() {
         )}
 
         {/* Footer con boton guardar */}
-        <div className="flex items-center gap-4 pt-2">
-          <button type="submit" disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition-colors">
-            {saving ? "Guardando..." : "Guardar cambios"}
-          </button>
-          {msg && (
-            <span className={`text-sm font-medium ${msg.ok ? "text-green-600" : "text-red-600"}`}>
-              {msg.ok ? "✓" : "✕"} {msg.text}
-            </span>
-          )}
-        </div>
+        {tab !== "plantilla" && (
+          <div className="flex items-center gap-4 pt-2">
+            <button type="submit" disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition-colors">
+              {saving ? "Guardando..." : "Guardar cambios"}
+            </button>
+            {msg && (
+              <span className={`text-sm font-medium ${msg.ok ? "text-green-600" : "text-red-600"}`}>
+                {msg.ok ? "✓" : "✕"} {msg.text}
+              </span>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );

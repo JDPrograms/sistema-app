@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
 
@@ -10,9 +12,12 @@ export const metadata: Metadata = {
   description: "Plataforma multi-sitio para negocios",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale   = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="es" className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang={locale} className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Prevent flash of wrong theme on load */}
         <script
@@ -22,7 +27,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-full">
-        <ThemeProvider>{children}</ThemeProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ThemeProvider>{children}</ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -74,6 +74,11 @@ export default async function SiteAdminLayout({
     redirect(`/site/${slug}/login`);
   }
 
+  // Redirect new sites to onboarding wizard (outside this layout)
+  if (!(site as any).onboardingCompleted) {
+    redirect(`/site/${slug}/setup`);
+  }
+
   if (site.planType === "timed" && site.expiresAt && site.isActive) {
     const grace = new Date(site.expiresAt);
     grace.setDate(grace.getDate() + 10);
@@ -126,6 +131,7 @@ export default async function SiteAdminLayout({
   ];
   const operaciones = [
     ...(show("support") ? [{ href: s("support"), label: "💬 Soporte" }] : []),
+    ...(show("support") ? [{ href: s("chat"),    label: "🗨️ Chat en vivo" }] : []),
     ...(show("tasks")   ? [{ href: s("tasks"),   label: "✅ Tareas" }] : []),
     ...(show("pwa")     ? [{ href: s("app"),     label: "📲 App Android" }] : []),
   ];
@@ -142,11 +148,12 @@ export default async function SiteAdminLayout({
     {
       label: "Panel",
       links: [
-        { href: s("reports"),   label: "📊 Reportes" },
-        { href: s("audit-log"), label: "📋 Actividad" },
-        { href: s("admins"),    label: "👑 Administradores" },
-        { href: s("security"),  label: "🔐 Seguridad" },
-        { href: s("help"),      label: "📖 Guía de módulos" },
+        { href: s("reports"),      label: "📊 Reportes" },
+        { href: s("audit-log"),    label: "📋 Actividad" },
+        { href: s("admins"),       label: "👑 Administradores" },
+        { href: s("security"),     label: "🔐 Seguridad" },
+        { href: s("qr"),           label: "📱 Código QR" },
+        { href: s("help"),         label: "📖 Guía de módulos" },
       ],
     },
   ];

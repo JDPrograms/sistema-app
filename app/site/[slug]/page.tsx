@@ -4,6 +4,7 @@ import Link from "next/link";
 import BlockRenderer from "@/components/blocks/BlockRenderer";
 import AdsBanner from "@/components/AdsBanner";
 import ChatWidget from "@/components/ai/ChatWidget";
+import HumanChatWidget from "@/components/site/ChatWidget";
 
 // Original templates
 import BarbershopTemplate from "@/components/templates/BarbershopTemplate";
@@ -105,6 +106,14 @@ export default async function SitePublicPage({ params }: { params: Promise<{ slu
           agentName={chatAgent.name}
           siteSlug={slug}
           primaryColor={site.primaryColor}
+        />
+      )}
+
+      {!chatAgent && mods.support === true && (
+        <HumanChatWidget
+          slug={slug}
+          primaryColor={site.primaryColor}
+          businessName={(site as any).name}
         />
       )}
     </div>
