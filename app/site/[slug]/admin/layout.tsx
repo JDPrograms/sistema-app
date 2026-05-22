@@ -153,6 +153,7 @@ export default async function SiteAdminLayout({
         { href: s("admins"),       label: "👑 Administradores" },
         { href: s("security"),     label: "🔐 Seguridad" },
         { href: s("qr"),           label: "📱 Código QR" },
+        { href: s("subscription"), label: "💳 Planes" },
         { href: s("help"),         label: "📖 Guía de módulos" },
       ],
     },

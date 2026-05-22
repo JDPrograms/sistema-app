@@ -22,6 +22,7 @@ const NAV_SECTIONS = [
     label: "Gestión",
     links: [
       { href: "/admin/reports", label: "📈 Reportes", color: "text-cyan-300" },
+      { href: "/admin/plan-requests", label: "📋 Solicitudes de plan", color: "text-amber-300" },
       { href: "/admin/announcements", label: "📢 Anuncios", color: "text-blue-300" },
       { href: "/admin/audit-log", label: "📋 Actividad", color: "text-slate-300" },
     ],
