@@ -8,6 +8,7 @@ import SiteAdminSidebar, { type NavSection } from "@/components/admin/SiteAdminS
 import SiteAdminPageBanner from "@/components/admin/SiteAdminPageBanner";
 import { PushSubscriber } from "@/components/PushSubscriber";
 import NotificationBell from "@/components/admin/NotificationBell";
+import { parseSitePerms } from "@/lib/permissions";
 
 function getExpiryStatus(site: { planType: string; expiresAt: Date | null; expiryReason: string | null }) {
   if (site.planType !== "timed" || !site.expiresAt) return null;
@@ -92,48 +93,64 @@ export default async function SiteAdminLayout({
   const mods = (() => { try { return JSON.parse(site.modules || "{}"); } catch { return {}; } })();
   const expiryStatus = getExpiryStatus(site as any);
 
-  const show = (key: string) => isSuperAdmin || mods[key] === true;
+  // Load fresh permissions from DB so changes apply without re-login
+  let perms: Record<string, boolean> = {};
+  if (!isSuperAdmin) {
+    const adminRecord = await prisma.siteAdmin.findUnique({
+      where: { id: (session.user as any).id },
+      select: { permissions: true, isOwner: true },
+    });
+    perms = parseSitePerms(adminRecord?.permissions, adminRecord?.isOwner ?? false);
+  }
+
+  // Module must be enabled AND admin must have the corresponding permission
+  const show = (moduleKey: string, permKey?: string) => {
+    if (isSuperAdmin) return true;
+    if (mods[moduleKey] !== true) return false;
+    if (permKey) return perms[permKey] === true;
+    return true;
+  };
 
   const s = (key: string) => `/site/${slug}/admin/${key}`;
 
   const agenda = [
-    ...(show("appointments") ? [{ href: s("appointments"), label: "📅 Citas" }] : []),
-    ...(show("calendar")     ? [{ href: s("calendar"),     label: "🗓️ Calendario" }] : []),
-    ...(show("appointments") ? [{ href: s("staff"),        label: "👤 Personal" }] : []),
-    ...(show("appointments") ? [{ href: s("waiting-list"), label: "⏳ Lista de espera" }] : []),
+    ...(show("appointments", "canManageAppointments") ? [{ href: s("appointments"), label: "📅 Citas" }] : []),
+    ...(show("calendar",     "canManageAppointments") ? [{ href: s("calendar"),     label: "🗓️ Calendario" }] : []),
+    ...(show("appointments", "canManageStaff")        ? [{ href: s("staff"),        label: "👤 Personal" }] : []),
+    ...(show("appointments", "canManageAppointments") ? [{ href: s("waiting-list"), label: "⏳ Lista de espera" }] : []),
   ];
   const ventas = [
-    ...(show("products") ? [{ href: s("products"), label: "📦 Productos" }] : []),
-    ...(show("billing")  ? [{ href: s("billing"),  label: "🧾 Contabilidad" }] : []),
-    ...(show("coupons")  ? [{ href: s("coupons"),  label: "🎟️ Cupones" }] : []),
-    ...(show("loyalty")  ? [{ href: s("loyalty"),  label: "⭐ Lealtad" }] : []),
+    ...(show("products", "canManageProducts") ? [{ href: s("products"), label: "📦 Productos" }] : []),
+    ...(show("billing",  "canManageBilling")  ? [{ href: s("billing"),  label: "🧾 Contabilidad" }] : []),
+    ...(show("coupons",  "canManageCoupons")  ? [{ href: s("coupons"),  label: "🎟️ Cupones" }] : []),
+    ...(show("loyalty",  "canManageLoyalty")  ? [{ href: s("loyalty"),  label: "⭐ Lealtad" }] : []),
   ];
   const clientes = [
-    ...(show("users")      ? [{ href: s("users"),      label: "👥 Usuarios" }] : []),
-    ...(show("crm")        ? [{ href: s("crm"),        label: "🗂️ CRM" }] : []),
-    ...(show("reviews")    ? [{ href: s("reviews"),    label: "⭐ Reseñas" }] : []),
-    ...(show("newsletter") ? [{ href: s("newsletter"), label: "📧 Newsletter" }] : []),
+    ...(show("users",      "canManageUsers")      ? [{ href: s("users"),      label: "👥 Usuarios" }] : []),
+    ...(show("crm",        "canManageCRM")        ? [{ href: s("crm"),        label: "🗂️ CRM" }] : []),
+    ...(show("reviews",    "canManageReviews")    ? [{ href: s("reviews"),    label: "⭐ Reseñas" }] : []),
+    ...(show("newsletter", "canManageNewsletter") ? [{ href: s("newsletter"), label: "📧 Newsletter" }] : []),
   ];
   const contenido = [
-    ...(show("content") ? [{ href: s("content"), label: "📋 Contenido" }] : []),
-    ...(show("gallery") ? [{ href: s("gallery"), label: "🖼️ Galería" }] : []),
-    ...(show("blog")    ? [{ href: s("blog"),    label: "✍️ Blog" }] : []),
-    ...(show("faq")     ? [{ href: s("faq"),     label: "❓ FAQ" }] : []),
+    ...(show("content", "canManageContent") ? [{ href: s("content"), label: "📋 Contenido" }] : []),
+    ...(show("gallery", "canManageGallery") ? [{ href: s("gallery"), label: "🖼️ Galería" }] : []),
+    ...(show("blog",    "canManageBlog")    ? [{ href: s("blog"),    label: "✍️ Blog" }] : []),
+    ...(show("faq",     "canManageFAQ")     ? [{ href: s("faq"),     label: "❓ FAQ" }] : []),
   ];
   const apariencia = [
-    ...(show("customize") ? [{ href: s("customize"), label: "🎨 Personalizar" }] : []),
-    ...(show("customize") ? [{ href: s("sections"),  label: "⟡ Secciones" }] : []),
-    ...(show("customize") ? [{ href: s("builder"),   label: "✦ Constructor" }] : []),
+    ...(show("customize", "canCustomize") ? [{ href: s("customize"), label: "🎨 Personalizar" }] : []),
+    ...(show("customize", "canCustomize") ? [{ href: s("sections"),  label: "⟡ Secciones" }] : []),
+    ...(show("customize", "canCustomize") ? [{ href: s("builder"),   label: "✦ Constructor" }] : []),
   ];
   const marketing = [
-    ...(show("ads") ? [{ href: s("ads"), label: "📢 Publicidades" }] : []),
-    ...(show("ai")  ? [{ href: s("ai"),  label: "🤖 IA" }] : []),
+    ...(show("ads", "canManageAds") ? [{ href: s("ads"), label: "📢 Publicidades" }] : []),
+    ...(show("ai",  "canManageAI")  ? [{ href: s("ai"),  label: "🤖 IA" }] : []),
   ];
   const operaciones = [
-    ...(show("support") ? [{ href: s("support"), label: "💬 Soporte" }] : []),
-    ...(show("support") ? [{ href: s("chat"),    label: "🗨️ Chat en vivo" }] : []),
-    ...(show("tasks")   ? [{ href: s("tasks"),   label: "✅ Tareas" }] : []),
-    ...(show("pwa")     ? [{ href: s("app"),     label: "📲 App Android" }] : []),
+    ...(show("support", "canManageSupport") ? [{ href: s("support"), label: "💬 Soporte" }] : []),
+    ...(show("support", "canManageSupport") ? [{ href: s("chat"),    label: "🗨️ Chat en vivo" }] : []),
+    ...(show("tasks",   "canManageTasks")   ? [{ href: s("tasks"),   label: "✅ Tareas" }] : []),
+    ...(show("pwa")                         ? [{ href: s("app"),     label: "📲 App Android" }] : []),
   ];
 
   const navSections: NavSection[] = [
@@ -148,9 +165,9 @@ export default async function SiteAdminLayout({
     {
       label: "Panel",
       links: [
-        { href: s("reports"),      label: "📊 Reportes" },
+        ...(isSuperAdmin || perms["canViewReports"]   ? [{ href: s("reports"),      label: "📊 Reportes" }]      : []),
         { href: s("audit-log"),    label: "📋 Actividad" },
-        { href: s("admins"),       label: "👑 Administradores" },
+        ...(isSuperAdmin || perms["canManageAdmins"]  ? [{ href: s("admins"),       label: "👑 Administradores" }] : []),
         { href: s("security"),     label: "🔐 Seguridad" },
         { href: s("qr"),           label: "📱 Código QR" },
         { href: s("subscription"), label: "💳 Planes" },

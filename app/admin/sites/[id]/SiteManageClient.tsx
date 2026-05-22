@@ -141,10 +141,13 @@ export default function SiteManageClient({ site }: { site: Site }) {
   }
 
   function toggleAdminPerm(adminId: string, perm: string) {
-    setAdminPerms((prev) => ({
-      ...prev,
-      [adminId]: { ...prev[adminId], [perm]: !prev[adminId]?.[perm] },
-    }));
+    setAdminPerms((prev) => {
+      const current = prev[adminId]?.[perm] !== false; // matches display logic
+      return {
+        ...prev,
+        [adminId]: { ...prev[adminId], [perm]: !current },
+      };
+    });
   }
 
   async function handleSave() {
