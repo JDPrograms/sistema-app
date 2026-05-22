@@ -57,16 +57,16 @@
   },
   "pricing": {
     "title": "Planes y precios",
-    "subtitle": "Empieza gratis, escala cuando lo necesites.",
+    "subtitle": "Elige el plan que mejor se adapta a tu negocio.",
     "popular": "MÁS POPULAR",
+    "cta_label": "Solicitar plan",
     "plans": [
       {
-        "name": "Básico",
-        "price": "Gratis",
-        "period": "",
-        "desc": "Para empezar tu negocio digital",
+        "name": "Starter",
+        "price": "$9",
+        "period": "/mes",
+        "desc": "Para comenzar tu negocio digital",
         "features": ["1 sitio web", "50 citas / mes", "100 productos", "Chat con clientes", "Plantillas incluidas"],
-        "cta": "Empezar gratis",
         "highlight": false
       },
       {
@@ -75,16 +75,14 @@
         "period": "/mes",
         "desc": "Para negocios en crecimiento",
         "features": ["5 sitios web", "Citas ilimitadas", "Productos ilimitados", "Email marketing", "Reportes avanzados", "Soporte prioritario"],
-        "cta": "Comenzar prueba gratis",
         "highlight": true
       },
       {
         "name": "Empresa",
-        "price": "Custom",
+        "price": "A convenir",
         "period": "",
         "desc": "Para operaciones a gran escala",
         "features": ["Sitios ilimitados", "White-label", "API personalizada", "Integraciones avanzadas", "SLA garantizado", "Gestor de cuenta dedicado"],
-        "cta": "Contactar ventas",
         "highlight": false
       }
     ]

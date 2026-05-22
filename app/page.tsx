@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 import MarketingNav from "@/components/marketing/MarketingNav";
+import PricingSection from "@/components/marketing/PricingSection";
 
 export default async function Home() {
   const session = await auth();
@@ -18,7 +19,7 @@ export default async function Home() {
 
   const FEATURES  = t.raw("features.items") as { icon: string; title: string; desc: string }[];
   const TEMPLATES = t.raw("templates.items") as { emoji: string; name: string; desc: string }[];
-  const PLANS     = t.raw("pricing.plans")  as { name: string; price: string; period: string; desc: string; features: string[]; cta: string; highlight: boolean }[];
+  const PLANS     = t.raw("pricing.plans")  as { name: string; price: string; period: string; desc: string; features: string[]; highlight: boolean }[];
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100">
@@ -185,46 +186,12 @@ export default async function Home() {
               {t("pricing.subtitle")}
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
-            {PLANS.map((plan) => (
-              <div key={plan.name}
-                className={`relative rounded-2xl border-2 p-8 bg-white dark:bg-slate-950 transition-shadow ${
-                  plan.highlight
-                    ? "border-blue-500 shadow-2xl shadow-blue-500/10"
-                    : "border-gray-200 dark:border-slate-700"
-                }`}>
-                {plan.highlight && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap">
-                    {t("pricing.popular")}
-                  </div>
-                )}
-                <div className="mb-6">
-                  <h3 className="font-bold text-lg mb-1">{plan.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">{plan.desc}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold">{plan.price}</span>
-                    <span className="text-gray-400 text-sm">{plan.period}</span>
-                  </div>
-                </div>
-                <ul className="space-y-2.5 mb-8">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm">
-                      <span className="text-green-500 font-bold flex-shrink-0">✓</span>
-                      <span className="text-gray-700 dark:text-slate-300">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/login"
-                  className={`block text-center py-3 rounded-xl font-semibold transition-all text-sm ${
-                    plan.highlight
-                      ? "bg-blue-500 hover:bg-blue-400 text-white"
-                      : "border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
-                  }`}>
-                  {plan.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
+          <PricingSection
+            plans={PLANS}
+            popular={t("pricing.popular")}
+            ctaLabel={t("pricing.cta_label")}
+            locale={locale}
+          />
         </div>
       </section>
 

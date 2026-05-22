@@ -57,16 +57,16 @@
   },
   "pricing": {
     "title": "Plans & pricing",
-    "subtitle": "Start free, scale when you need.",
+    "subtitle": "Choose the plan that best fits your business.",
     "popular": "MOST POPULAR",
+    "cta_label": "Request plan",
     "plans": [
       {
-        "name": "Basic",
-        "price": "Free",
-        "period": "",
+        "name": "Starter",
+        "price": "$9",
+        "period": "/mo",
         "desc": "To start your digital business",
         "features": ["1 website", "50 appointments / month", "100 products", "Client chat", "Templates included"],
-        "cta": "Start free",
         "highlight": false
       },
       {
@@ -75,7 +75,6 @@
         "period": "/mo",
         "desc": "For growing businesses",
         "features": ["5 websites", "Unlimited appointments", "Unlimited products", "Email marketing", "Advanced reports", "Priority support"],
-        "cta": "Start free trial",
         "highlight": true
       },
       {
@@ -84,7 +83,6 @@
         "period": "",
         "desc": "For large-scale operations",
         "features": ["Unlimited sites", "White-label", "Custom API", "Advanced integrations", "Guaranteed SLA", "Dedicated account manager"],
-        "cta": "Contact sales",
         "highlight": false
       }
     ]
